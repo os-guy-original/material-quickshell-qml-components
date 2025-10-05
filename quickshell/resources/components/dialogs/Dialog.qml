@@ -13,8 +13,9 @@ Item {
     property string primaryText: "OK"
     property string secondaryText: "Cancel"
     property bool dismissible: false
-    property int padding: 16
-    property int maxWidth: 420
+    // Increase padding and maxWidth to more closely match Android Material dialog sizes
+    property int padding: 20
+    property int maxWidth: 560
     // If > 0, dialog content width is forced to this value (inside padding)
     property int preferredWidth: -1
     // Internal helper for measuring content without causing binding loops
@@ -59,9 +60,9 @@ Item {
     // dialog surface
         Rectangle {
         id: card
-        width: root.preferredWidth > 0
-                 ? Math.max(280, root.preferredWidth)
-                 : Math.max(280, Math.min(root.maxWidth, content.implicitWidth + root.padding * 2))
+    width: root.preferredWidth > 0
+         ? Math.max(280, root.preferredWidth)
+         : Math.max(320, Math.min(root.maxWidth, content.implicitWidth + root.padding * 2))
         height: content.implicitHeight + root.padding * 2
         radius: 12
         color: Palette.palette().surface

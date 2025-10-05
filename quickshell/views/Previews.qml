@@ -701,6 +701,48 @@ FloatingWindow {
         Row { spacing: 8; Text { text: "List item 3"; color: Palette.palette().onSurface } }
       }
 
+      // RoundedFrame preview (size + corner radius)
+      Column {
+        spacing: 8
+        Type.Label { text: "RoundedFrame Preview"; color: Palette.palette().onSurface; pixelSize: 16; bold: true }
+        Row {
+          spacing: 16
+          // Preview frame
+          Layout.RoundedFrame {
+            id: rfPrev
+            width: Math.round(40 + rfSize.value * (220 - 40))
+            height: width
+            cornerRadius: Math.round(0 + rfRadius.value * (60 - 0))
+            circular: rfCircle.checked
+            source: "https://picsum.photos/seed/rounded-demo/800"
+            borderColor: Palette.palette().outline
+            borderWidth: rfBorder.checked ? 1 : 0
+          }
+          // Controls
+          Column {
+            spacing: 6
+            Row { spacing: 8; height: 28
+              Type.Label { text: "Size:"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Inputs.LinearSlider { id: rfSize; value: 0.5; width: 220; anchors.verticalCenter: parent.verticalCenter }
+              Type.Label { text: Math.round(40 + rfSize.value * (220 - 40)) + "px"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+            }
+            Row { spacing: 8; height: 28
+              Type.Label { text: "Radius:"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Inputs.LinearSlider { id: rfRadius; value: 0.2; width: 220; enabled: !rfCircle.checked; anchors.verticalCenter: parent.verticalCenter }
+              Type.Label { text: Math.round(0 + rfRadius.value * (60 - 0)) + "px"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+            }
+            Row { spacing: 8; height: 28
+              Type.Label { text: "Circle:"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Inputs.Switch { id: rfCircle; anchors.verticalCenter: parent.verticalCenter }
+            }
+            Row { spacing: 8; height: 28
+              Type.Label { text: "Border:"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Inputs.Switch { id: rfBorder; checked: true; anchors.verticalCenter: parent.verticalCenter }
+            }
+          }
+        }
+      }
+
       // Messages list with dividers and avatars
       Column {
         spacing: 6

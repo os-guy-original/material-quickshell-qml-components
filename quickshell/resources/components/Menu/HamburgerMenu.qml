@@ -4,659 +4,441 @@ import "../../colors.js" as Palette
 import "./MenuRegistry.js" as MenuRegistry
 
 /*
-  Hamburger popup menu with open grow animation and nested submenus.
-  Usage:
-    HamburgerMenu {
-      id: menu
-      anchors.fill: parent // overlay that captures clicks outside
-      items: [
-        { label: "File", submenu: [ { label: "New" }, { label: "Open" } ] },
-        { label: "Edit" }
-      ]
-    }
-    menu.openAtItem(someItem)
+  New HamburgerMenu implementation
+  - items: [{ label, enabled?, submenu?, onTriggered? }]
+  - API: openAt(x,y), openAtItem(item), close(), signal closed()
+  - Features:
+    - 48dp rows
+    - Circular expanding ripple centered on pointer
+    - Submenu support (auto-side selection)
+    - Keyboard navigation: Up/Down, Right (open submenu), Enter, Esc/Left
+    - No DropShadow
 */
+
 Item {
-  id: overlayRoot
-  anchors.fill: parent
-  visible: overlayRoot.open || panel.opacity > 0.01 || Boolean(activeSubmenu)
-  z: 999
-
-  // Public API
-  property bool open: false
-  property var items: [] // Array of { label, enabled?, submenu?, onTriggered?() }
-  property int menuX: 0
-  property int menuY: 0
-  // Minimum width for the panel; set to 0 to fully respect text width
-  property int minWidth: 0
-  onItemsChanged: {
-    // Reset measurement cache when content changes
-    try { panel.maxRowWidth = 0 } catch(e) {}
-  }
-  property bool isSubmenu: false
-  property var parentRowItem: null // for submenus, reference to the row that spawned it
-  property var parentMenu: null // for submenus, reference to parent menu instance
-  signal closed()
-  onClosed: {
-    // Allow fade-out to complete before overlay hides entirely
-    Qt.callLater(function(){ if (panel.opacity <= 0.01) overlayRoot.visible = false })
-  }
-
-  // Internal
-  property Item activeSubmenu: null
-  property Item activeRowItem: null
-  property Item submenuOwnerRow: null
-  // Animation/morph helpers for submenus
-  property bool firstOpen: false
-  // Pivot inside submenu panel to grow from (relative to panel coords)
-  property real openPivotY: 0
-  // Indicates that the active child submenu opens to the left of this menu
-  property bool childOpensLeft: false
-  // Whether THIS instance (when it is a submenu) should open to the left of its parent anchor
-  property bool opensToLeft: false
-
-  onFirstOpenChanged: {
-    if (firstOpen && isSubmenu) {
-      panel.submenuOpenScaleY = 0.01
-      Qt.callLater(function(){ panel.submenuOpenScaleY = 1.0; overlayRoot.firstOpen = false })
-    }
-  }
-  // Expose panel geometry in overlay coordinates for seam calculation from siblings
-  property real panelTop: panel.y
-  property real panelBottom: panel.y + panel.height
-
-  function overlapLen(a1, a2, b1, b2) {
-    var start = Math.max(a1, b1)
-    var end = Math.min(a2, b2)
-    return Math.max(0, end - start)
-  }
-
-  onActiveRowItemChanged: {
-    if (activeRowItem && activeRowItem.itemData && activeRowItem.itemData.submenu) {
-      openSubmenuForRow(activeRowItem)
-    } else if (activeSubmenu) {
-      try { activeSubmenu.close() } catch(e) {}
-      activeSubmenu = null
-      submenuOwnerRow = null
-    }
-  }
-
-  function openAt(x, y) {
-    menuX = x
-    menuY = y
-    open = true
-    MenuRegistry.requestOpen(overlayRoot)
-    console.log("HamburgerMenu: openAt", x, y)
-  }
-  function openAtItem(item) {
-    if (!item || !item.mapToItem) { openAt(0, 0); return }
-    var p = item.mapToItem(overlayRoot, 0, item.height)
-    var ox = Math.round(p.x)
-    var oy = Math.round(p.y)
-    console.log("HamburgerMenu: openAtItem mapped to", ox, oy)
-    openAt(ox, oy)
-  }
-  function close() {
-    open = false
-    if (activeSubmenu) {
-      try { activeSubmenu.close() } catch (e) {}
-      activeSubmenu = null
-    }
-    MenuRegistry.notifyClosed(overlayRoot)
-    closed()
-  }
-
-  // Click-away catcher
-  MouseArea {
+    id: root
     anchors.fill: parent
-    visible: !overlayRoot.isSubmenu && overlayRoot.open
-    enabled: visible
-    hoverEnabled: true
-    onClicked: overlayRoot.close()
-    z: 0
-  }
+    z: 999
 
-  // Menu panel
-  Rectangle {
-    id: panel
-    // For submenus, adjust x to align right edge to anchor if opening left
-    x: overlayRoot.isSubmenu && overlayRoot.opensToLeft ? (overlayRoot.menuX - width + 1) : overlayRoot.menuX
-    // For main menus, if not enough space below, open upwards by shifting y; always clamp to viewport
-    property bool openUpwards: !overlayRoot.isSubmenu && (overlayRoot.menuY + height > overlayRoot.height)
-    y: overlayRoot.isSubmenu
-       ? Math.max(0, Math.min(overlayRoot.menuY, overlayRoot.height - height))
-       : (panel.openUpwards
-            ? Math.max(0, overlayRoot.menuY - height)
-            : Math.min(overlayRoot.menuY, overlayRoot.height - height))
-    visible: overlayRoot.open || panel.opacity > 0.01
-    opacity: overlayRoot.open ? 1.0 : 0.0
-    scale: overlayRoot.isSubmenu ? 1.0 : (overlayRoot.open ? 1.0 : 0.92)
-    transformOrigin: Item.TopLeft
-    radius: 10
-    // Match right-click menu contrast: slightly grayish panel
-    color: Palette.isDarkMode()
-           ? Qt.lighter(Palette.palette().surfaceVariant, 1.08)
-           : Qt.darker(Palette.palette().surfaceVariant, 1.06)
-    border.color: Palette.palette().outline
-    border.width: 1
-    antialiasing: true
-    z: overlayRoot.isSubmenu ? 2 : 1
-
-    // Custom transform to allow submenu to grow from a pivot (row center)
-    property real submenuOpenScaleY: 1.0
-    // Track widest row implicit width for proper panel sizing
-    property int maxRowWidth: 0
-    transform: [
-      Scale {
-        id: growFromPivot
-        origin.x: 0
-        origin.y: overlayRoot.isSubmenu ? overlayRoot.openPivotY : 0
-        xScale: 1
-        yScale: overlayRoot.isSubmenu ? panel.submenuOpenScaleY : 1
-      }
-    ]
-
-    // Derived seam metrics for when two menus touch side-by-side
-    // Values are relative to this panel's coordinate space
-    // Right seam metrics: if THIS menu owns a submenu (regardless of being a submenu itself)
-    property real rightSeamStart: (overlayRoot.activeSubmenu)
-                                  ? Math.max(0, Math.max(panel.y, overlayRoot.activeSubmenu.panelTop) - panel.y)
-                                  : 0
-    property real rightSeamEnd: (overlayRoot.activeSubmenu)
-                                ? Math.max(0, Math.min(panel.y + panel.height, overlayRoot.activeSubmenu.panelBottom) - panel.y)
-                                : 0
-    // Left seam metrics when THIS menu owns a submenu that opens to the left
-    property real childLeftSeamStart: (overlayRoot.activeSubmenu && overlayRoot.childOpensLeft)
-                                      ? Math.max(0, Math.max(panel.y, overlayRoot.activeSubmenu.panelTop) - panel.y)
-                                      : 0
-    property real childLeftSeamEnd: (overlayRoot.activeSubmenu && overlayRoot.childOpensLeft)
-                                    ? Math.max(0, Math.min(panel.y + panel.height, overlayRoot.activeSubmenu.panelBottom) - panel.y)
-                                    : 0
-    property real leftSeamStart: (overlayRoot.isSubmenu && overlayRoot.parentMenu)
-                                 ? Math.max(0, Math.max(panel.y, overlayRoot.parentMenu.panelTop) - panel.y)
-                                 : 0
-    property real leftSeamEnd: (overlayRoot.isSubmenu && overlayRoot.parentMenu)
-                               ? Math.max(0, Math.min(panel.y + panel.height, overlayRoot.parentMenu.panelBottom) - panel.y)
-                               : 0
-
-    Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-    // Animate position for morphing an already-open submenu to a new row
-    Behavior on x { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-    Behavior on y { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-    Behavior on submenuOpenScaleY { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-
-    Component.onCompleted: {
-      if (overlayRoot.isSubmenu && overlayRoot.firstOpen) {
-        panel.submenuOpenScaleY = 0.01
-        Qt.callLater(function(){ panel.submenuOpenScaleY = 1.0; overlayRoot.firstOpen = false })
-      }
+    // Public API
+    property bool open: false
+    property var items: []
+    // mark if this menu is a submenu (so opening won't close its parent via MenuRegistry)
+    property bool isSubmenu: false
+    onItemsChanged: {
+        if (panel) { panel.maxRowWidth = 0; panel.updateSize() }
     }
 
-    // Single hover rect for stability across rows
-    property int hoverIndex: -1
-    property real hoverY: 0
-    property real hoverH: 0
-    property bool hoverIsFirst: false
-    property bool hoverIsLast: false
-    MouseArea { id: panelHoverCatcher; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+    // External back pill overlay (outside and above the menu panel)
     Rectangle {
-      id: hoverRect
-      z: 0
-      x: 0
-      width: panel.width
-      y: contentCol.y + panel.hoverY - (panel.hoverIsFirst ? panel.radius : 0)
-      height: Math.max(0, panel.hoverH + (panel.hoverIsFirst ? panel.radius : 0) + (panel.hoverIsLast ? panel.radius : 0))
-      radius: (panel.hoverIsFirst || panel.hoverIsLast) ? panel.radius : 6
-      color: (Palette.isDarkMode() ? Qt.lighter(Palette.palette().surfaceVariant, 1.32)
-                                    : Qt.darker(Palette.palette().surfaceVariant, 1.22))
-      opacity: panelHoverCatcher.containsMouse ? 1.0 : 0.0
-      Behavior on y { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
-      Behavior on height { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
-      Behavior on opacity { NumberAnimation { duration: 80; easing.type: Easing.OutCubic } }
+        id: backPillOverlay
+        property bool _suppressAnim: true
+        visible: root.open && root.currentLevel > 0 && panel.visible
+        width: 48
+        height: root.backPillHeight
+        radius: height / 2
+        color: Palette.palette().surfaceVariant
+        // Center horizontally over the panel
+        x: panel.x + Math.round((panel.width - width) / 2)
+        y: Math.max(0, panel.y - (root.backPillHeight + root.backGap))
+        z: panel.z + 1
+        Behavior on x { enabled: !backPillOverlay._suppressAnim; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        Behavior on y { enabled: !backPillOverlay._suppressAnim; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        // No border per request; just the pill background and arrow
+        Text { text: "‹"; anchors.centerIn: parent; color: Palette.palette().onSurface; font.pixelSize: 16 }
+        MouseArea { anchors.fill: parent; onClicked: root.popLevel() }
     }
+    property int menuX: 0
+    property int menuY: 0
+    property int minWidth: 0
+    signal closed()
 
-    Column {
-      id: contentCol
-      anchors.margins: 8
-      anchors.fill: parent
-      spacing: 2
-      Repeater {
-        id: rep
-        model: overlayRoot.items || []
-        delegate: Item {
-          id: row
-          // Respect label width (+ paddings and optional chevron)
-          implicitWidth: (txt.implicitWidth + 32 + (modelData && modelData.submenu ? 16 : 0))
-          // Fill visible width, but don't affect Column's implicitWidth
-          width: panel.width - 16
-          height: 32
-
-          property var itemData: modelData
-          property bool hovered: false
-
-          // Per-row hover visuals handled by panel-level hoverRect
-
-          // Label
-          Text {
-            id: txt
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: 12
-            text: itemData && itemData.label ? itemData.label : ""
-            color: Palette.palette().onSurface
-            font.pixelSize: 14
-            opacity: itemData && itemData.enabled === false ? 0.38 : 1.0
-          }
-
-          // Update panel's maxRowWidth whenever our implicit width might change
-          Component.onCompleted: panel.maxRowWidth = Math.max(panel.maxRowWidth, implicitWidth)
-          onImplicitWidthChanged: panel.maxRowWidth = Math.max(panel.maxRowWidth, implicitWidth)
-
-          // Submenu chevron — direction reacts to layout prediction
-          Text {
-            visible: !!(itemData && itemData.submenu && itemData.submenu.length > 0)
-            text: (overlayRoot.childOpensLeft ? "‹" : "›")
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: 10
-            color: Palette.palette().onSurfaceVariant
-            font.pixelSize: 16
-          }
-
-          MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            onEntered: {
-              row.hovered = true
-              // Track current hover row for seam and interactions
-              overlayRoot.activeRowItem = row
-              panel.hoverIndex = index
-              panel.hoverY = row.y
-              panel.hoverH = row.height
-              panel.hoverIsFirst = (index === 0)
-              panel.hoverIsLast = (index === rep.count - 1)
-              if (row.itemData && row.itemData.submenu) {
-                openSubmenuForRow(row)
-              } else if (overlayRoot.activeSubmenu) {
-                try { overlayRoot.activeSubmenu.close() } catch (e) {}
-                overlayRoot.activeSubmenu = null
-                overlayRoot.submenuOwnerRow = null
-              }
+    // Pre-measure labels to get a reliable max row width before first render
+    function _preMeasureMaxRowWidth(itemsArr) {
+        var maxW = 0
+        var arr = itemsArr || items
+        if (!arr || !arr.length) return 0
+        for (var i = 0; i < arr.length; i++) {
+            var it = arr[i]
+            var txt = (it && it.label) ? String(it.label) : ""
+            // Create a transient Text to read implicitWidth
+            var t = Qt.createQmlObject('import QtQuick 2.15; Text { text: "' + txt.replace(/"/g, '\\"') + '"; font.pixelSize: 15; visible: false }', root)
+            if (t && typeof t.implicitWidth === 'number') {
+                var rowW = t.implicitWidth + (it && it.submenu ? 48 : 24)
+                if (rowW > maxW) maxW = rowW
+                t.destroy()
             }
-            onExited: {
-              row.hovered = false
-            }
-            onClicked: {
-              if (row.itemData && row.itemData.enabled === false) return
-              if (row.itemData && row.itemData.submenu) {
-                // Toggle submenu on click as well
-                openSubmenuForRow(row)
-              } else {
-                if (row.itemData && row.itemData.onTriggered) {
-                  try { row.itemData.onTriggered() } catch(e) {}
-                }
-                overlayRoot.close()
-              }
-            }
-          }
         }
-      }
+        return Math.round(maxW)
     }
 
-    // Size binds after content built — use measured max row width
-    width: Math.max(overlayRoot.minWidth, panel.maxRowWidth + 16)
-    height: contentCol.implicitHeight + 16
-
-    // Seam hider across entire touching edge while submenu is open
-    // On the side where child submenu is attached, remove only the overlapping border segment
-    Rectangle {
-      id: seamRight
-      width: panel.border.width
-      color: panel.color
-      visible: overlayRoot.activeSubmenu !== null && !overlayRoot.childOpensLeft && (height > 0)
-      anchors.right: parent.right
-      y: panel.rightSeamStart
-      height: Math.max(0, panel.rightSeamEnd - panel.rightSeamStart)
-      z: 3
+    // Predict height for a given items array (rows are 48px + spacing between)
+    function _predictHeight(itemsArr) {
+        var arr = itemsArr || []
+        var rows = arr.length
+        var body = rows > 0 ? (rows * 48 + Math.max(0, rows - 1) * 4) : 0 // 4 = content.spacing
+        var margins = 16 // top+bottom margins on content
+        return body + margins
     }
 
-    Rectangle {
-      id: seamLeftForChild
-      width: panel.border.width
-      color: panel.color
-      visible: overlayRoot.activeSubmenu !== null && overlayRoot.childOpensLeft && (height > 0)
-      anchors.left: parent.left
-      y: panel.childLeftSeamStart
-      height: Math.max(0, panel.childLeftSeamEnd - panel.childLeftSeamStart)
-      z: 3
+    // Internal
+    property int focusedIndex: -1
+    // Sliding navigation state
+    property var itemStack: [] // array of item arrays
+    property int currentLevel: 0
+    property var visibleItems: []
+    property var nextItems: []
+    property bool animating: false
+    onIsSubmenuChanged: { if (isSubmenu) console.log("[HamburgerMenu] 'isSubmenu' is deprecated; using single in-place sliding menu.") }
+
+    // Back pill configuration
+    property int backPillHeight: 28
+    property int backGap: 8
+
+    // Slide animations and navigation at root scope
+    property var _afterSlide: null
+    NumberAnimation { id: slideA; target: pageA; property: "x"; duration: 160; easing.type: Easing.OutCubic }
+    NumberAnimation { id: slideB; target: pageB; property: "x"; duration: 160; easing.type: Easing.OutCubic; onStopped: { if (root._afterSlide) { var f = root._afterSlide; root._afterSlide = null; f() } } }
+
+    function pushLevel(items) {
+        if (!items || root.animating) return
+        root.animating = true
+        root.nextItems = items
+        pageB.x = viewport.width
+        // Predict size for next items and pre-apply so the panel resizes as we slide
+        panel.maxRowWidth = root._preMeasureMaxRowWidth(items)
+        var predictedW = Math.max(root.minWidth, panel.maxRowWidth > 0 ? panel.maxRowWidth + 36 : panel.width)
+        var predictedH = _predictHeight(items)
+        panel.width = predictedW
+        panel.height = predictedH
+        // keep incoming page hidden during slide; outgoing pageA remains visible
+        pageB.opacity = 0
+        slideA.to = -viewport.width
+        slideB.to = 0
+        root._afterSlide = function(){
+            try { root.itemStack.push(items); root.currentLevel = root.itemStack.length - 1; root.visibleItems = items } catch(e) {}
+            pageA.x = 0; pageB.x = viewport.width
+            root.animating = false
+            panel.maxRowWidth = root._preMeasureMaxRowWidth(root.visibleItems)
+            root.nextItems = []
+            panel.updateSize()
+            // after commit, ensure only active page is visible
+            pageA.opacity = 1
+            pageB.opacity = 0
+        }
+        slideA.start(); slideB.start()
     }
 
-    // For submenu, hide the border on the side that touches the parent
-    // If the submenu opens to the RIGHT of the parent, its LEFT border overlaps the parent's right border
-    Rectangle {
-      id: seamLeft
-      width: panel.border.width
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu !== null && !overlayRoot.opensToLeft && (height > 0)
-      anchors.left: parent.left
-      y: panel.leftSeamStart
-      height: Math.max(0, panel.leftSeamEnd - panel.leftSeamStart)
-      z: 3
-    }
-    // If the submenu opens to the LEFT of the parent, its RIGHT border overlaps the parent's left border
-    Rectangle {
-      id: seamRightForSub
-      width: panel.border.width
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu !== null && overlayRoot.opensToLeft && (height > 0)
-      anchors.right: parent.right
-      y: panel.leftSeamStart
-      height: Math.max(0, panel.leftSeamEnd - panel.leftSeamStart)
-      z: 3
-    }
-
-    // Rounded connectors so two menus appear attached with a curved elbow
-    // Show a quarter-circle at the start/end of the seam if it is near a corner
-    // Right edge connectors (when child opens to the right)
-    Rectangle {
-      // Top-right connector
-      width: panel.radius; height: panel.radius
-      radius: panel.radius
-      color: panel.color
-      visible: overlayRoot.activeSubmenu && !overlayRoot.childOpensLeft && (panel.rightSeamStart > 0) && (panel.rightSeamStart < panel.radius) && (panel.rightSeamStart > 0.5)
-      anchors.right: parent.right
-      y: panel.rightSeamStart - height
-      z: 4
-    }
-    Rectangle {
-      // Bottom-right connector
-      width: panel.radius; height: panel.radius
-      radius: panel.radius
-      color: panel.color
-      visible: overlayRoot.activeSubmenu && !overlayRoot.childOpensLeft && (panel.height - panel.rightSeamEnd > 0) && ((panel.height - panel.rightSeamEnd) < panel.radius) && ((panel.height - panel.rightSeamEnd) > 0.5)
-      anchors.right: parent.right
-      y: panel.rightSeamEnd
-      z: 4
+    function popLevel() {
+        if (root.currentLevel <= 0 || root.animating) return
+        root.animating = true
+        var prevItems = root.itemStack[root.currentLevel - 1]
+        root.nextItems = prevItems
+        pageB.x = -viewport.width
+        // Predict size for previous items and pre-apply
+        panel.maxRowWidth = root._preMeasureMaxRowWidth(prevItems)
+        var predictedW2 = Math.max(root.minWidth, panel.maxRowWidth > 0 ? panel.maxRowWidth + 36 : panel.width)
+        var predictedH2 = _predictHeight(prevItems)
+        panel.width = predictedW2
+        panel.height = predictedH2
+        // keep incoming page hidden during slide
+        pageB.opacity = 0
+        slideA.to = viewport.width
+        slideB.to = 0
+        root._afterSlide = function(){
+            try { root.itemStack.pop(); root.currentLevel = root.itemStack.length - 1; root.visibleItems = prevItems } catch(e) {}
+            pageA.x = 0; pageB.x = viewport.width
+            root.animating = false
+            panel.maxRowWidth = root._preMeasureMaxRowWidth(root.visibleItems)
+            root.nextItems = []
+            panel.updateSize()
+            pageA.opacity = 1
+            pageB.opacity = 0
+        }
+        slideA.start(); slideB.start()
     }
 
-    // Submenu connectors (edge that touches the parent)
-    Rectangle {
-      // Top-left connector (submenu opens to the RIGHT of parent)
-      width: panel.radius; height: panel.radius
-      radius: panel.radius
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && !overlayRoot.opensToLeft && (panel.leftSeamStart > 0) && (panel.leftSeamStart < panel.radius) && (panel.leftSeamStart > 0.5)
-      anchors.left: parent.left
-      y: panel.leftSeamStart - height
-      z: 4
-    }
-    Rectangle {
-      // Bottom-left connector (submenu opens to the RIGHT of parent)
-      width: panel.radius; height: panel.radius
-      radius: panel.radius
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && !overlayRoot.opensToLeft && (panel.height - panel.leftSeamEnd > 0) && ((panel.height - panel.leftSeamEnd) < panel.radius) && ((panel.height - panel.leftSeamEnd) > 0.5)
-      anchors.left: parent.left
-      y: panel.leftSeamEnd
-      z: 4
-    }
-    // Right edge connectors when submenu opens to the LEFT of parent
-    Rectangle {
-      // Top-right connector
-      width: panel.radius; height: panel.radius
-      radius: panel.radius
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && overlayRoot.opensToLeft && (panel.leftSeamStart > 0) && (panel.leftSeamStart < panel.radius) && (panel.leftSeamStart > 0.5)
-      anchors.right: parent.right
-      y: panel.leftSeamStart - height
-      z: 4
-    }
-    Rectangle {
-      // Bottom-right connector
-      width: panel.radius; height: panel.radius
-      radius: panel.radius
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && overlayRoot.opensToLeft && (panel.height - panel.leftSeamEnd > 0) && ((panel.height - panel.leftSeamEnd) < panel.radius) && ((panel.height - panel.leftSeamEnd) > 0.5)
-      anchors.right: parent.right
-      y: panel.leftSeamEnd
-      z: 4
+    onOpenChanged: {
+        if (open) {
+            // Only request global open for top-level menus. Submenus should not close their parent.
+            if (!root.isSubmenu) MenuRegistry.requestOpen(root)
+            panel.forceActiveFocus()
+            focusedIndex = -1
+            // Prepare for sizing and show only after measurement to avoid first-open broken layout
+            panel.sized = false
+            // clear any fading state (in case we were mid-fade from previous close)
+            panel.fading = false
+            panel.opacity = 0
+            // init stack FIRST so we can pre-measure correct contents
+            try { root.itemStack = [ root.items ? root.items : [] ]; root.currentLevel = 0; root.visibleItems = root.itemStack[0]; } catch(e) { root.itemStack = [[]]; root.currentLevel = 0; root.visibleItems = [] }
+            // Pre-measure to establish a good initial size (width + height)
+            try { panel.maxRowWidth = root._preMeasureMaxRowWidth(root.visibleItems) } catch(e2) { panel.maxRowWidth = 0 }
+            var predictedW = Math.max(root.minWidth, (panel.maxRowWidth > 0 ? panel.maxRowWidth + 36 : 160))
+            var predictedH = _predictHeight(root.visibleItems)
+            // keep hidden until sized to avoid first-open wrong size flash
+            panel.visible = false
+            panel.width = predictedW
+            panel.height = predictedH
+            panel.measuredCount = 0
+            // Defer size calculation to allow repeater/delegates to complete
+            Qt.callLater(function(){ Qt.callLater(panel.updateSize) })
+        } else {
+            MenuRegistry.notifyClosed(root)
+        }
     }
 
-    // Parent-left connectors (when a child opens to the left of this menu)
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      radius: panel.radius
-      color: panel.color
-      visible: overlayRoot.activeSubmenu && overlayRoot.childOpensLeft && (panel.childLeftSeamStart > 0) && (panel.childLeftSeamStart < panel.radius) && (panel.childLeftSeamStart > 0.5)
-      anchors.left: parent.left
-      y: panel.childLeftSeamStart - height
-      z: 4
+    function openAt(x, y) {
+        menuX = Math.round(x)
+        menuY = Math.round(y)
+        open = true
     }
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      radius: panel.radius
-      color: panel.color
-      visible: overlayRoot.activeSubmenu && overlayRoot.childOpensLeft && (panel.height - panel.childLeftSeamEnd > 0) && ((panel.height - panel.childLeftSeamEnd) < panel.radius) && ((panel.height - panel.childLeftSeamEnd) > 0.5)
-      anchors.left: parent.left
-      y: panel.childLeftSeamEnd
-      z: 4
+    function openAtItem(item) {
+        if (!item || !item.mapToItem) { openAt(0,0); return }
+        var p = item.mapToItem(root, 0, item.height)
+        openAt(p.x, p.y)
+    }
+    function close() {
+        open = false
+        closed()
     }
 
-    // Corner flatteners: if the seam meets the very top/bottom edge, corners should be sharp
-    // and the border should not draw a rounded arc. We overlay a square in panel color to mask it.
-    // Right side (for any menu that owns a submenu opening to the right)
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      color: panel.color
-      visible: overlayRoot.activeSubmenu && !overlayRoot.childOpensLeft && (panel.rightSeamStart <= 0.5)
-      anchors.top: parent.top
-      anchors.right: parent.right
-      z: 5
-    }
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      color: panel.color
-      visible: overlayRoot.activeSubmenu && !overlayRoot.childOpensLeft && ((panel.height - panel.rightSeamEnd) <= 0.5)
-      anchors.bottom: parent.bottom
-      anchors.right: parent.right
-      z: 5
-    }
-    // Left side flatteners for parent when child opens left
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      color: panel.color
-      visible: overlayRoot.activeSubmenu && overlayRoot.childOpensLeft && (panel.childLeftSeamStart <= 0.5)
-      anchors.top: parent.top
-      anchors.left: parent.left
-      z: 5
-    }
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      color: panel.color
-      visible: overlayRoot.activeSubmenu && overlayRoot.childOpensLeft && ((panel.height - panel.childLeftSeamEnd) <= 0.5)
-      anchors.bottom: parent.bottom
-      anchors.left: parent.left
-      z: 5
-    }
-    // Submenu panel (left/right side flatteners depending on orientation)
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && !overlayRoot.opensToLeft && (panel.leftSeamStart <= 0.5)
-      anchors.top: parent.top
-      anchors.left: parent.left
-      z: 5
-    }
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && !overlayRoot.opensToLeft && ((panel.height - panel.leftSeamEnd) <= 0.5)
-      anchors.bottom: parent.bottom
-      anchors.left: parent.left
-      z: 5
-    }
-    // Right side flatteners when submenu opens to the left
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && overlayRoot.opensToLeft && (panel.leftSeamStart <= 0.5)
-      anchors.top: parent.top
-      anchors.right: parent.right
-      z: 5
-    }
-    Rectangle {
-      width: panel.radius; height: panel.radius
-      color: panel.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && overlayRoot.opensToLeft && ((panel.height - panel.leftSeamEnd) <= 0.5)
-      anchors.bottom: parent.bottom
-      anchors.right: parent.right
-      z: 5
-    }
+    // click-away
+    MouseArea { anchors.fill: parent; visible: root.open; enabled: visible; onClicked: root.close(); hoverEnabled: true }
 
-    // Restore horizontal border lines when corners are sharp (masked by corner flattener)
-    // Right side — top and bottom edges near seam
     Rectangle {
-      height: panel.border.width
-      width: panel.radius
-      color: panel.border.color
-      visible: overlayRoot.activeSubmenu && !overlayRoot.childOpensLeft && (panel.rightSeamStart <= 0.5)
-      anchors.top: parent.top
-      anchors.right: parent.right
-      z: 6
-    }
-    Rectangle {
-      height: panel.border.width
-      width: panel.radius
-      color: panel.border.color
-      visible: overlayRoot.activeSubmenu && !overlayRoot.childOpensLeft && ((panel.height - panel.rightSeamEnd) <= 0.5)
-      anchors.bottom: parent.bottom
-      anchors.right: parent.right
-      z: 6
-    }
-    // Left side — top and bottom edges near seam when child opens left
-    Rectangle {
-      height: panel.border.width
-      width: panel.radius
-      color: panel.border.color
-      visible: overlayRoot.activeSubmenu && overlayRoot.childOpensLeft && (panel.childLeftSeamStart <= 0.5)
-      anchors.top: parent.top
-      anchors.left: parent.left
-      z: 6
-    }
-    Rectangle {
-      height: panel.border.width
-      width: panel.radius
-      color: panel.border.color
-      visible: overlayRoot.activeSubmenu && overlayRoot.childOpensLeft && ((panel.height - panel.childLeftSeamEnd) <= 0.5)
-      anchors.bottom: parent.bottom
-      anchors.left: parent.left
-      z: 6
-    }
-    // Submenu — top and bottom edges near touching side
-    Rectangle {
-      height: panel.border.width
-      width: panel.radius
-      color: panel.border.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && !overlayRoot.opensToLeft && (panel.leftSeamStart <= 0.5)
-      anchors.top: parent.top
-      anchors.left: parent.left
-      z: 6
-    }
-    Rectangle {
-      height: panel.border.width
-      width: panel.radius
-      color: panel.border.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && !overlayRoot.opensToLeft && ((panel.height - panel.leftSeamEnd) <= 0.5)
-      anchors.bottom: parent.bottom
-      anchors.left: parent.left
-      z: 6
-    }
-    Rectangle {
-      height: panel.border.width
-      width: panel.radius
-      color: panel.border.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && overlayRoot.opensToLeft && (panel.leftSeamStart <= 0.5)
-      anchors.top: parent.top
-      anchors.right: parent.right
-      z: 6
-    }
-    Rectangle {
-      height: panel.border.width
-      width: panel.radius
-      color: panel.border.color
-      visible: overlayRoot.isSubmenu && overlayRoot.parentMenu && overlayRoot.opensToLeft && ((panel.height - panel.leftSeamEnd) <= 0.5)
-      anchors.bottom: parent.bottom
-      anchors.right: parent.right
-      z: 6
-    }
-  }
+        id: panel
+        property bool sized: false
+        property int measuredCount: 0
+        x: Math.min(Math.max(0, root.menuX), root.width - width)
+        y: Math.min(Math.max(0, root.menuY), root.height - height)
+        // Measured max row width + paddings computed in updateSize
+        property int maxRowWidth: 0
+        property int sizeAttempts: 0
+        property bool fading: false
+        property bool _postAdjusted: false
+        // width and height are assigned in updateSize()
+        // Darker tonal surface and no border
+        color: Qt.darker(Palette.palette().surfaceVariant, 1.12)
+        radius: 12
+        border.width: 0
+    visible: false
+    opacity: 0
+        Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        // Animate resize to follow content changes smoothly
+        Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        // Suppress position animation for the very first show to avoid (0,0) slide-in
+        property bool _suppressPosAnim: true
+        Behavior on x { enabled: !panel._suppressPosAnim; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        Behavior on y { enabled: !panel._suppressPosAnim; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        z: 10
 
-  // Helper to open submenu for a row
-  function openSubmenuForRow(rowItem) {
-    if (!rowItem || !rowItem.itemData || !rowItem.itemData.submenu) return
-    // If submenu is already open for this row, do nothing
-    if (overlayRoot.activeSubmenu && overlayRoot.submenuOwnerRow === rowItem) {
-      return
+        focus: true
+        // page-level fade handled on pageA/pageB; no global content fade
+        Keys.onPressed: function(event) {
+            if (!root.open) return
+            if (event.key === Qt.Key_Down) {
+                focusedIndex = Math.min(rep.count - 1, focusedIndex + 1)
+                rep.forceActiveDelegate = focusedIndex
+                event.accepted = true
+            } else if (event.key === Qt.Key_Up) {
+                focusedIndex = Math.max(0, focusedIndex - 1)
+                rep.forceActiveDelegate = focusedIndex
+                event.accepted = true
+            } else if (event.key === Qt.Key_Right) {
+                if (focusedIndex >= 0 && focusedIndex < rep.count) {
+                    var d = rep.itemAt(focusedIndex)
+                    if (d && d.itemData && d.itemData.submenu) root.pushLevel(d.itemData.submenu)
+                }
+                event.accepted = true
+            } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Escape) {
+                if (root.currentLevel > 0) root.popLevel(); else root.close();
+                event.accepted = true
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                if (focusedIndex >= 0 && focusedIndex < rep.count) {
+                    var d = rep.itemAt(focusedIndex)
+                    if (d) d.activateRow()
+                }
+                event.accepted = true
+            }
+        }
+
+        Column {
+            id: content
+            anchors.margins: 8
+            anchors.fill: parent
+            spacing: 4
+            // content opacity controlled at page level (pageA/pageB)
+
+            // Disable internal header; back pill will be drawn outside the panel
+            Item { id: header; width: parent.width; height: 0; visible: false }
+
+            // Shared row delegate used by both pages
+            Component {
+                id: rowDelegate
+                Item {
+                    id: rowItem
+                    property bool measured: false
+                    property var itemData: modelData
+                    width: parent.width - 16
+                    height: 48
+                    property bool hovered: false
+
+                    // full-width hover background (edge-to-edge)
+                    Rectangle {
+                        id: hoverRect
+                        x: -8
+                        y: 0
+                        width: panel.width
+                        height: parent.height
+                        color: Palette.isDarkMode() ? Qt.lighter(Palette.palette().surfaceVariant, 1.18) : Qt.darker(Palette.palette().surfaceVariant, 1.08)
+                        opacity: hovered ? 1.0 : 0.0
+                        radius: 0
+                        z: 0
+                        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                    }
+
+                    // content container
+                    Item {
+                        anchors.fill: parent
+                        anchors.margins: 8
+
+                        Text {
+                            id: label
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: itemData && itemData.label ? itemData.label : ""
+                            color: Palette.palette().onSurface
+                            font.pixelSize: 15
+                            z: 2
+                            Component.onCompleted: {
+                                if (!rowItem.measured) { rowItem.measured = true; panel.measuredCount++ }
+                            }
+                            onImplicitWidthChanged: { Qt.callLater(panel.updateSize) }
+                        }
+
+                        Text {
+                            id: chevron
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: !!(itemData && itemData.submenu && itemData.submenu.length > 0)
+                            text: "›"
+                            color: Palette.palette().onSurfaceVariant
+                            font.pixelSize: 16
+                            z: 2
+                        }
+                    }
+
+                    // Activate the row: either trigger action or open submenu (slide)
+                    function activateRow() {
+                        if (itemData && itemData.enabled === false) return
+                        if (itemData && itemData.submenu) openSubmenuAtRow()
+                        else { if (itemData && itemData.onTriggered) itemData.onTriggered(); root.close() }
+                    }
+
+                    // Deprecated API kept for compatibility
+                    function openSubmenuAtRow() {
+                        console.log("[HamburgerMenu] openSubmenuAtRow is deprecated; sliding into submenu instead.")
+                        if (itemData && itemData.submenu) root.pushLevel(itemData.submenu)
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: { hovered = true }
+                        onExited: { hovered = false }
+                        onClicked: function(mouse) { activateRow() }
+                    }
+
+                }
+            }
+
+            // Sliding viewport with two pages
+            Item {
+                id: viewport
+                clip: true
+                width: parent.width
+                height: Math.max(pageA.implicitHeight, pageB.implicitHeight)
+
+                Column {
+                    id: pageA
+                    x: 0
+                    width: viewport.width
+                    spacing: 4
+                    opacity: 0
+                    Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                    Repeater {
+                        id: rep
+                        model: root.visibleItems || []
+                        property int forceActiveDelegate: -1
+                        delegate: rowDelegate
+                    }
+                }
+
+                Column {
+                    id: pageB
+                    x: viewport.width
+                    width: viewport.width
+                    spacing: 4
+                    opacity: 0
+                    Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                    Repeater {
+                        id: repNext
+                        model: root.nextItems || []
+                        delegate: rowDelegate
+                    }
+                }
+            }
+        }
+
+        function updateSize() {
+            // Fully predictive sizing: compute from data, not delegates
+            if (!root.open) { panel.visible = false; return }
+            panel.maxRowWidth = root._preMeasureMaxRowWidth(root.visibleItems)
+            var measuredW = Math.max(root.minWidth, (panel.maxRowWidth > 0 ? panel.maxRowWidth + 36 : panel.width))
+            var measuredH = _predictHeight(root.visibleItems)
+            panel.width = Math.round(measuredW)
+            panel.height = Math.round(measuredH)
+            // Clear nextItems after slide to prevent duplicates
+            root.nextItems = []
+            if (root.width <= 1 || root.height <= 1) { Qt.callLater(panel.updateSize); return }
+            // Disable initial position animation to avoid (0,0) slide-in
+            var firstShow = !panel.visible
+            if (firstShow) panel._suppressPosAnim = true
+            panel.x = Math.min(Math.max(0, root.menuX), root.width - panel.width)
+            var extra = root.currentLevel > 0 ? (root.backPillHeight + root.backGap) : 0
+            panel.y = Math.min(Math.max(extra, root.menuY + extra), root.height - panel.height)
+            panel.sized = true
+            if (root.open) {
+                panel.visible = true
+                if (panel.opacity === 0) Qt.callLater(function(){ panel.opacity = 1 })
+                // first open: once placed/sized, fade in current page
+                if (firstShow) Qt.callLater(function(){ pageA.opacity = 1 })
+            }
+            // Enable position animation after first placement
+            if (firstShow) Qt.callLater(function(){ panel._suppressPosAnim = false; backPillOverlay._suppressAnim = false })
+            // no global content fade; per-page opacity handles reveal
+        }
+    // Removed auto-update on completed to avoid flashing before open
+
+        // watch for root.open to trigger fade-out instead of immediate hide
+        Connections {
+            target: root
+            function onOpenChanged() {
+                if (!root.open && panel.sized) {
+                    panel.fading = true
+                    // animate opacity to 0; Behavior on opacity will animate
+                    panel.opacity = 0
+                }
+            }
+        }
+        // when opacity becomes 0 and we're in fading state, finalize hide
+        onOpacityChanged: {
+            if (panel.opacity === 0 && panel.fading && !root.open) {
+                panel.visible = false
+                panel.fading = false
+                panel.sized = false
+            }
+        }
     }
-    // Predict opening side using a conservative min width; set opensToLeft for child
-    var minWidth = 160
-    var preferLeft = (panel.x + panel.width + minWidth + 8 > overlayRoot.width)
-    overlayRoot.childOpensLeft = preferLeft
-    // Compute anchor point: if opening left, anchor at left edge (+1), else right edge (-1)
-    var localX = preferLeft ? 1 : (panel.width - 1)
-    var pos = panel.mapToItem(overlayRoot, localX, rowItem.y + contentCol.y)
-    if (overlayRoot.activeSubmenu) {
-      try {
-        overlayRoot.activeSubmenu.items = rowItem.itemData.submenu
-        overlayRoot.activeSubmenu.openPivotY = Math.round((rowItem.height / 2) + 8)
-        overlayRoot.activeSubmenu.opensToLeft = preferLeft
-        overlayRoot.activeSubmenu.menuX = Math.round(pos.x)
-        overlayRoot.activeSubmenu.menuY = Math.round(pos.y)
-        overlayRoot.activeSubmenu.isSubmenu = true
-        overlayRoot.activeSubmenu.parentRowItem = rowItem
-        overlayRoot.activeSubmenu.parentMenu = overlayRoot
-        overlayRoot.activeSubmenu.open = true
-        // trigger subtle grow-from-center on morph as well
-        overlayRoot.activeSubmenu.firstOpen = true
-        overlayRoot.submenuOwnerRow = rowItem
-      } catch (e) {
-        console.log("Failed to morph submenu, recreating:", e)
-        try { overlayRoot.activeSubmenu.close() } catch (e2) {}
-      overlayRoot.activeSubmenu = null
-      }
-    }
-    if (!overlayRoot.activeSubmenu) {
-    var comp = Qt.createComponent(Qt.resolvedUrl("HamburgerMenu.qml"))
-    function finishCreate() {
-      var inst = comp.createObject(overlayRoot, {
-        items: rowItem.itemData.submenu,
-        menuX: Math.round(pos.x),
-        menuY: Math.round(pos.y),
-        open: true,
-        isSubmenu: true,
-          firstOpen: true,
-          openPivotY: Math.round((rowItem.height / 2) + 8),
-          opensToLeft: preferLeft,
-        parentRowItem: rowItem,
-        parentMenu: overlayRoot
-      })
-      overlayRoot.activeSubmenu = inst
-      overlayRoot.submenuOwnerRow = rowItem
-      inst.closed.connect(function(){ if (overlayRoot.activeSubmenu === inst) overlayRoot.activeSubmenu = null })
-    }
-    if (comp.status === Component.Ready) {
-      finishCreate()
-    } else if (comp.status === Component.Error) {
-      console.log("Failed to load submenu:", comp.errorString())
-    } else {
-      comp.statusChanged.connect(function(){
-        if (comp.status === Component.Ready) finishCreate()
-        else if (comp.status === Component.Error) console.log("Failed to load submenu:", comp.errorString())
-      })
-      }
-    }
-  }
 }
-
-

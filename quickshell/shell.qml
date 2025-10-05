@@ -4,7 +4,7 @@ import QtQuick.Layouts 1.15
 import Quickshell
 import "resources/colors.js" as Palette
 import "resources/components/DialogService.js" as DialogService
-import "views/Shell.qml" as AppShell
+import "shell/Shell.qml" as AppShell
 
 FloatingWindow {
     id: window
@@ -44,7 +44,7 @@ FloatingWindow {
                 })
                 dlg.tertiarySelected.connect(function(){
                     console.log("LayerDialog tertiary -> Starting Shell mode")
-                    var s = Qt.createComponent("views/Shell.qml")
+                    var s = Qt.createComponent("shell/Shell.qml")
                     if (s.status === Component.Ready) {
                         var obj = s.createObject(window)
                         if (obj && obj.start) obj.start()

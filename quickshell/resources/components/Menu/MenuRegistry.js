@@ -1,19 +1,27 @@
 // Simple singleton shim so HamburgerMenu can coordinate open/close across overlays
-.pragma library
+//.pragma library
 
 var _openMenus = []
 
 function requestOpen(menu) {
   try {
-    // Close others on open to behave like a global menu overlay
-    for (var i = 0; i < _openMenus.length; i++) {
-      var m = _openMenus[i]
-      if (m && m !== menu && m.close) {
-        try { m.close() } catch (e) {}
+    // If this menu is a submenu, don't close other menus (so parent remains visible).
+    if (menu && menu.isSubmenu) {
+      // avoid duplicates
+      var found = false
+      for (var j = 0; j < _openMenus.length; j++) { if (_openMenus[j] === menu) { found = true; break } }
+      if (!found) _openMenus.push(menu)
+    } else {
+      // Close others on open to behave like a global menu overlay
+      for (var i = 0; i < _openMenus.length; i++) {
+        var m = _openMenus[i]
+        if (m && m !== menu && m.close) {
+          try { m.close() } catch (e) {}
+        }
       }
+      _openMenus = [menu]
     }
   } catch (e) { /* ignore */ }
-  _openMenus = [menu]
 }
 
 function notifyClosed(menu) {

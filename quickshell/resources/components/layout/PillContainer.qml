@@ -14,19 +14,13 @@ Rectangle {
 
     // Content
     default property alias content: contentItem.data
-    implicitWidth: Math.max(0, contentItem.implicitWidth + padding * 2)
-    implicitHeight: Math.max(0, contentItem.implicitHeight + padding * 2)
+    implicitWidth: Math.max(0, contentItem.childrenRect.width + padding * 2)
+    implicitHeight: Math.max(0, contentItem.childrenRect.height + padding * 2)
 
     Item {
         id: contentItem
-        anchors.fill: undefined
         x: root.padding
         y: root.padding
-        // Let content define size; parent implicitSize uses these
-        width: childrenRect.width
-        height: childrenRect.height
-        implicitWidth: childrenRect.width
-        implicitHeight: childrenRect.height
     }
 }
 
