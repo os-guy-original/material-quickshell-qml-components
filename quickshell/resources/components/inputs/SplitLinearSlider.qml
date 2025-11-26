@@ -9,13 +9,13 @@ Item {
   // A bit thicker by default
   property real thickness: 16
   property real cornerRadius: thickness / 2
-  property color trackColor: Palette.palette().surfaceVariant
+  property color trackColor: Palette.isDarkMode() ? Palette.palette().surfaceVariant : Qt.darker(Palette.palette().background, 1.15)
   property color fillColor: Palette.palette().primary
   property color dividerColor: Palette.palette().primary
   property color endDotColor: "white"
   property real dividerWidth: 4
-  // Gap on each side of the divider: 3.1x divider thickness
-  readonly property real gapOnEachSide: dividerWidth * 3.1
+  // Gap on each side of the divider: 1.5x divider thickness (reduced for tighter spacing)
+  readonly property real gapOnEachSide: dividerWidth * 1.5
   readonly property real totalGap: gapOnEachSide * 2 + dividerWidth
   // A single end dot on the empty side (right end)
   property real endDotSize: 5
@@ -73,7 +73,6 @@ Item {
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter
     }
-    Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.InOutQuad } }
   }
 
   // Right (empty) segment (body trimmed away from outer end + outer round cap)
@@ -103,8 +102,6 @@ Item {
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
     }
-    Behavior on x { NumberAnimation { duration: 140; easing.type: Easing.InOutQuad } }
-    Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.InOutQuad } }
   }
 
   // Divider line above the track and taller than the bar
@@ -117,7 +114,6 @@ Item {
     anchors.verticalCenter: parent.verticalCenter
     x: _centerX - width / 2
     z: 10
-    Behavior on x { NumberAnimation { duration: 140; easing.type: Easing.InOutQuad } }
   }
 
   // Single end dot on the empty side's outer end; only visible when there is empty region

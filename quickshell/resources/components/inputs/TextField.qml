@@ -47,7 +47,7 @@ Item {
         radius: 12
         color: filled ? Palette.palette().surfaceVariant : Palette.palette().surface
         border.width: 1.2
-        border.color: error ? Palette.palette().error : (input.activeFocus ? Palette.palette().primary : Qt.darker(Palette.palette().outline, 1.15))
+        border.color: error ? Palette.palette().error : (input.activeFocus ? Palette.palette().primary : (Palette.palette().isDarkMode ? Qt.lighter(Palette.palette().outline, 1.3) : Qt.darker(Palette.palette().outline, 1.3)))
         opacity: enabled ? 1.0 : 0.38
         Behavior on border.color { ColorAnimation { duration: 120; easing.type: Easing.InOutQuad } }
     }

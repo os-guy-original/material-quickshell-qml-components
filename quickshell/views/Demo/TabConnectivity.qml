@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
-import "../../resources/colors.js" as Palette
+import "../../resources/components" as Components
 import "../../resources/components/typography" as Typography
 import "../../resources/components/inputs" as Inputs
 
@@ -14,7 +14,7 @@ Item {
     anchors.fill: parent
     spacing: 12
 
-    Typography.Label { text: "Connectivity"; pixelSize: 16; color: Palette.palette().onSurface }
+    Typography.Label { text: "Connectivity"; pixelSize: 16; color: Components.ColorPalette.onSurface }
 
     RowLayout {
       spacing: 8
@@ -26,7 +26,7 @@ Item {
       Item { Layout.fillWidth: true }
       Typography.Label {
         text: (sharedState && sharedState.wifiEnabled) ? "On" : "Off"
-        color: Palette.palette().onSurfaceVariant
+        color: Components.ColorPalette.onSurfaceVariant
       }
     }
 
@@ -40,13 +40,13 @@ Item {
       Item { Layout.fillWidth: true }
       Typography.Label {
         text: (sharedState && sharedState.bluetoothEnabled) ? "On" : "Off"
-        color: Palette.palette().onSurfaceVariant
+        color: Components.ColorPalette.onSurfaceVariant
       }
     }
 
     Typography.Label {
       text: "These toggles are shared across tabs."
-      color: Palette.palette().onSurfaceVariant
+      color: Components.ColorPalette.onSurfaceVariant
       wrapMode: Text.Wrap
       Layout.fillWidth: true
     }

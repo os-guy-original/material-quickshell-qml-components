@@ -1,9 +1,9 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Rectangle {
     id: root
-    color: Palette.palette().surface
+    color: Components.ColorPalette.surface
     radius: 12
     // No border; slightly darker than surface via overlay
     layer.enabled: true

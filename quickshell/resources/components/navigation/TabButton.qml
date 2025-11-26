@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
-import "../../colors.js" as Palette
+import ".." as Components
 import "../icons" as Icon
 
 Item {
@@ -9,16 +9,18 @@ Item {
     property url iconSource: ""
     // Optional test icon names: "home", "search", "person"
     property string iconName: ""
+    property string iconText: ""
+    property string iconFont: "Material Symbols Outlined"
     property bool active: false
     // Indicator line position: "bottom", "top", "left", "right"
     property string indicatorPosition: "bottom"
     property int padding: 8
     property int spacing: 4
     property int iconSize: 20
-    property color indicatorColor: Palette.palette().primary
-    property color activeIconBackground: Palette.palette().secondaryContainer
-    property color activeIconColor: Palette.palette().onSecondaryContainer
-    property color inactiveIconColor: Palette.palette().onSurface
+    property color indicatorColor: Components.ColorPalette.primary
+    property color activeIconBackground: Components.ColorPalette.secondaryContainer
+    property color activeIconColor: Components.ColorPalette.onSecondaryContainer
+    property color inactiveIconColor: Components.ColorPalette.onSurface
     signal clicked()
 
     implicitWidth: Math.max(iconSize + padding * 2, contentCol.implicitWidth + padding * 2)
@@ -54,9 +56,10 @@ Item {
                 Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutBack } }
             }
 
-            // Icon priority: iconName (drawn), else iconSource (image)
-            Icon.Icon { anchors.centerIn: parent; name: root.iconName; size: iconSize; color: root.active ? activeIconColor : inactiveIconColor; visible: root.iconName !== "" }
-            Image { anchors.centerIn: parent; source: iconSource; width: iconSize; height: iconSize; visible: iconSource !== "" && root.iconName === ""; fillMode: Image.PreserveAspectFit; smooth: true }
+            // Icon priority: iconText (symbol font), iconName (drawn), else iconSource (image)
+            Text { anchors.centerIn: parent; text: root.iconText; font.family: root.iconFont; font.pixelSize: iconSize; color: root.active ? activeIconColor : inactiveIconColor; visible: root.iconText !== "" }
+            Icon.Icon { anchors.centerIn: parent; name: root.iconName; size: iconSize; color: root.active ? activeIconColor : inactiveIconColor; visible: root.iconName !== "" && root.iconText === "" }
+            Image { anchors.centerIn: parent; source: iconSource; width: iconSize; height: iconSize; visible: iconSource !== "" && root.iconName === "" && root.iconText === ""; fillMode: Image.PreserveAspectFit; smooth: true }
         }
 
         // Label (optional)
@@ -64,7 +67,7 @@ Item {
             id: labelItem
             text: root.label
             visible: root.label.length > 0
-            color: root.active ? Palette.palette().onSurface : Palette.palette().onSurfaceVariant
+            color: root.active ? Components.ColorPalette.onSurface : Components.ColorPalette.onSurfaceVariant
             font.pixelSize: 12
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
@@ -86,8 +89,10 @@ Item {
         }
         height: (indicatorPosition === "top" || indicatorPosition === "bottom") ? indicatorThickness : undefined
         width: (indicatorPosition === "left" || indicatorPosition === "right") ? indicatorThickness : undefined
-        Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-        Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+        Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+        Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+        Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+        Behavior on y { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
         // Anchor helpers to keep code short
         readonly property var indicatorLeft: (indicatorPosition === "left") ? parent.left : (indicatorPosition === "right" ? undefined : parent.left)
         readonly property var indicatorRight: (indicatorPosition === "right") ? parent.right : (indicatorPosition === "left" ? undefined : parent.right)

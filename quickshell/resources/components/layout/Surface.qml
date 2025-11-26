@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Rectangle {
     id: root
@@ -7,8 +7,8 @@ Rectangle {
     // Material-like surface with outline
     property real cornerRadius: 14
     property real outlineWidth: 1
-    property color surfaceColor: Palette.palette().surface
-    property color outlineColor: Palette.palette().outline
+    property color surfaceColor: Components.ColorPalette.surface
+    property color outlineColor: Components.ColorPalette.outline
     property real padding: 12
 
     color: surfaceColor

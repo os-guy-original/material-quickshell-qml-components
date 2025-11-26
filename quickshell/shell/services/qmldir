@@ -1,0 +1,13 @@
+module shell.services
+
+MprisService 1.0 MprisService.qml
+singleton NotificationService 1.0 NotificationService.qml
+singleton ExecutorService 1.0 ExecutorService.qml
+singleton ColorExtractorService 1.0 ColorExtractorService.qml
+singleton ColorService 1.0 ColorService.qml
+singleton OpacityService 1.0 OpacityService.qml
+singleton PowerService 1.0 PowerService.qml
+singleton SettingsService 1.0 SettingsService.qml
+singleton AppIconService 1.0 AppIconService/AppIconService.qml
+singleton ApplicationsService 1.0 ApplicationsService.qml
+singleton GlobalShortcutService 1.0 GlobalShortcutService.qml

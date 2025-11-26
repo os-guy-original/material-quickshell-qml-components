@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 import "../icons" as Icon
 
 Item {
@@ -12,14 +12,16 @@ Item {
 
     implicitWidth: diameter
     implicitHeight: diameter
+    layer.enabled: true
+    layer.smooth: true
+    clip: true
 
     Rectangle {
         id: background
         anchors.fill: parent
         radius: width / 2
         // Neutral surface-ish background, no primary/tonal usage
-        color: Palette.isDarkMode() ? Qt.lighter(Palette.palette().surface, 1.08)
-                                    : Qt.darker(Palette.palette().surface, 1.03)
+        color: Qt.lighter(Components.ColorPalette.surface, 1.05)
         border.width: 0
         opacity: root.enabled ? 1.0 : 0.38
         antialiasing: true
@@ -35,7 +37,7 @@ Item {
             anchors.fill: parent
             name: root.iconName
             size: parent.width
-            color: Palette.palette().onSurface
+            color: Components.ColorPalette.onSurface
             visible: root.iconName && root.iconName.length > 0
         }
         Image {
@@ -52,7 +54,7 @@ Item {
     Rectangle {
         anchors.fill: background
         radius: background.radius
-        color: Palette.palette().onSurface
+        color: Components.ColorPalette.onSurface
         opacity: mouseArea.pressed ? 0.14 : (mouseArea.containsMouse ? 0.06 : 0.0)
         visible: root.enabled
         Behavior on opacity { NumberAnimation { duration: 110; easing.type: Easing.InOutQuad } }

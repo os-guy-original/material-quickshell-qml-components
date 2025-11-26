@@ -5,7 +5,7 @@ Item {
   id: root
   property real value: 0.0            // 0..1
   property real step: 0.0             // 0 for continuous
-  property color trackColor: Palette.palette().surfaceVariant
+  property color trackColor: Palette.isDarkMode() ? Palette.palette().surfaceVariant : Qt.darker(Palette.palette().background, 1.08)
   property color fillColor: Palette.palette().primary
   property color thumbColor: Palette.palette().onPrimary
   property real thickness: 4

@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
     id: root
@@ -12,7 +12,7 @@ Item {
         id: hoverBg
         anchors.fill: parent
         radius: 6
-        color: Palette.palette().onSurface
+        color: Components.ColorPalette.onSurface
         opacity: mouse.containsMouse ? 0.06 : 0.0
         Behavior on opacity { NumberAnimation { duration: 100; easing.type: Easing.InOutQuad } }
     }
@@ -21,7 +21,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
         anchors.leftMargin: 8
-        color: Palette.palette().onSurface
+        color: Components.ColorPalette.onSurface
         text: root.text
         font.pixelSize: 14
     }

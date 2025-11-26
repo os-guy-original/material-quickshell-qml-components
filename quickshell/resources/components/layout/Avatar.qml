@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
   id: root
@@ -10,9 +10,9 @@ Item {
   // Initials to show when no image provided
   property string initials: ""
   // Background color for initials avatar
-  property color backgroundColor: Palette.palette().surfaceVariant
+  property color backgroundColor: Components.ColorPalette.surfaceVariant
   // Foreground color for initials text
-  property color foregroundColor: Palette.palette().onSurface
+  property color foregroundColor: Components.ColorPalette.onSurface
 
   implicitWidth: size
   implicitHeight: size
@@ -31,11 +31,16 @@ Item {
     // Image fills and is clipped to the circle
     Image {
       anchors.fill: parent
-      visible: root.source !== ""
+      visible: root.source !== "" && status === Image.Ready
       source: root.source
       fillMode: Image.PreserveAspectCrop
       smooth: true
-      asynchronous: true
+      asynchronous: false
+      onStatusChanged: {
+        if (status === Image.Error) {
+          visible = false
+        }
+      }
     }
 
     // Initials fallback when no image

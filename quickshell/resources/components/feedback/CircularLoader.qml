@@ -1,11 +1,11 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
     id: root
     // Material-like circular indeterminate loader
     property real size: 28
-    property color color: Palette.palette().primary
+    property color color: Qt.darker(Components.ColorPalette.primary, 1.2)
     property real strokeWidth: 3
     property bool running: true
     // speed and pulsing sweep

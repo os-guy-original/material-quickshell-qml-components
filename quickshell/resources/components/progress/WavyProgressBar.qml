@@ -1,13 +1,13 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 import "../../metrics.js" as Metrics
 
 Item {
     id: root
     // Generic wavy progress bar (Material You-like squiggle)
     property real progress: 0.0 // 0..1
-    property color trackColor: Palette.palette().surfaceVariant
-    property color progressColor: Palette.palette().primary
+    property color trackColor: Components.ColorPalette.isDarkMode ? Components.ColorPalette.surfaceVariant : Qt.darker(Components.ColorPalette.background, 1.15)
+    property color progressColor: Components.ColorPalette.primary
     property real amplitude: 8            // px
     property real wavelength: 32          // px
     property real strokeWidth: 4          // px
@@ -74,8 +74,8 @@ Item {
                 ctx.stroke()
             }
 
-            // draw knob at progress position
-            if (root.knobShape !== 'none') {
+            // draw knob at progress position (hide if progress is 0)
+            if (root.knobShape !== 'none' && clamped > 0.01) {
                 var kx = pw
                 var ky = yOf(kx)
                 var s = knobSize

@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
-import "../resources/colors.js" as Palette
+import "../resources/components" as Components
 import "../resources/components/actions" as Actions
 
 Window {
@@ -23,7 +23,7 @@ Window {
     // scrim
     Rectangle {
         anchors.fill: parent
-        color: Palette.palette().onSurface
+        color: Components.ColorPalette.onSurface
         opacity: fs.visible ? 0.32 : 0.0
         visible: true
         Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.InOutQuad } }
@@ -36,7 +36,7 @@ Window {
         width: Math.max(320, Math.min(520, content.implicitWidth + 32))
         height: content.implicitHeight + 32
         radius: 12
-        color: Palette.palette().surface
+        color: Components.ColorPalette.surface
         anchors.centerIn: parent
         opacity: fs.visible ? 1.0 : 0.0
         scale: fs.visible ? 1.0 : 0.97
@@ -52,8 +52,8 @@ Window {
             x: 16
             y: 16
             spacing: 12
-            Text { text: fs.titleText; color: Palette.palette().onSurface; font.pixelSize: 18 }
-            Text { text: fs.bodyText; color: Palette.palette().onSurfaceVariant; wrapMode: Text.Wrap; width: card.width - 32 }
+            Text { text: fs.titleText; color: Components.ColorPalette.onSurface; font.pixelSize: 18 }
+            Text { text: fs.bodyText; color: Components.ColorPalette.onSurfaceVariant; wrapMode: Text.Wrap; width: card.width - 32 }
             Row {
                 spacing: 8
                 anchors.right: parent.right

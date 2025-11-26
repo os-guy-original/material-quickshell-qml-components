@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
     id: root
@@ -21,7 +21,7 @@ Item {
         id: background
         anchors.fill: parent
         radius: width / 2
-        color: Palette.palette().surfaceVariant
+        color: Components.ColorPalette.surfaceVariant
         border.width: 0
         opacity: root.enabled ? 1.0 : 0.38
         antialiasing: true
@@ -33,7 +33,7 @@ Item {
         id: overlay
         anchors.fill: background
         radius: background.radius
-        color: Palette.palette().onSurface
+        color: Components.ColorPalette.onSurface
         opacity: 0
         visible: root.enabled
         Behavior on opacity { NumberAnimation { duration: 110; easing.type: Easing.InOutQuad } }
@@ -50,7 +50,7 @@ Item {
     readonly property int barThickness: Math.max(2, Math.round(width * 0.08))
     readonly property int barLength: Math.round(width * 0.80)
     // Use onSurface for glyph to contrast with tonal background
-    readonly property color barColor: Palette.palette().onSurface
+    readonly property color barColor: Components.ColorPalette.onSurface
 
         Rectangle { // top
             width: glyph.barLength
@@ -84,7 +84,7 @@ Item {
         id: ripple
         anchors.centerIn: parent
         width: 0; height: 0
-        color: Palette.palette().onSurface
+        color: Components.ColorPalette.onSurface
         opacity: 0
         radius: width/2
         z: 1

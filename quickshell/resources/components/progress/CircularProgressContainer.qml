@@ -1,13 +1,13 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 import "../../metrics.js" as Metrics
 
 Item {
     id: root
     // Determinate circular progress with a center slot
     property real progress: 0.0 // 0..1
-    property color trackColor: Palette.palette().surfaceVariant
-    property color progressColor: Palette.palette().primary
+    property color trackColor: Components.ColorPalette.isDarkMode ? Components.ColorPalette.surfaceVariant : Qt.darker(Components.ColorPalette.surfaceVariant, 1.15)
+    property color progressColor: Components.ColorPalette.primary
     property real strokeWidth: 6
     property real size: 72
     // Visual gap between progress end and remainder (empty) for determinate mode
@@ -79,7 +79,7 @@ Item {
         height: parent.height
         anchors.centerIn: parent
         // Convenience text centered
-        Text { visible: root.centerText.length > 0; anchors.centerIn: parent; text: root.centerText; color: Palette.palette().onSurface; font.pixelSize: 14 }
+        Text { visible: root.centerText.length > 0; anchors.centerIn: parent; text: root.centerText; color: Components.ColorPalette.onSurface; font.pixelSize: 14 }
         Item { id: centerContent; anchors.centerIn: parent }
     }
 }

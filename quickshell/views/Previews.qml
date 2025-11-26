@@ -2,7 +2,7 @@ import QtQuick 2.15
 import Quickshell
 import Quickshell.Services.SystemTray
 import QtQml.Models 2.15
-import "../resources/colors.js" as Palette
+import "../resources/components" as Components
 import "../resources/components/DialogService.js" as DialogService
 import "../resources/components/layout" as Layout
 import "../resources/components/typography" as Type
@@ -28,7 +28,7 @@ FloatingWindow {
   implicitHeight: 420
   minimumSize: Qt.size(480, 360)
 
-  Rectangle { anchors.fill: parent; color: Palette.palette().background }
+  Rectangle { anchors.fill: parent; color: Components.ColorPalette.isDarkMode ? Components.ColorPalette.background : Qt.darker(Components.ColorPalette.background, 1.08) }
 
   Nav.HeaderBar {
     id: bar
@@ -50,7 +50,7 @@ FloatingWindow {
     anchors.margins: 16
   Column {
       spacing: 12
-      Type.Label { text: "Preview Area"; color: Palette.palette().onSurface; pixelSize: 18; bold: true; bottomMargin: 2 }
+      Type.Label { text: "Preview Area"; color: Components.ColorPalette.onSurface; pixelSize: 18; bold: true; bottomMargin: 2 }
 
       // Transparent header demo
       Nav.HeaderBar { title: "Transparent Header"; titleAlignment: "center"; onCloseRequested: console.log("Header close clicked") }
@@ -68,18 +68,6 @@ FloatingWindow {
           Actions.Button { text: "Cancel"; outlined: true; kind: "cancel" }
           Actions.Button { text: "Danger"; kind: "danger" }
           Actions.Button {
-            id: openTimeDialogBtnTop
-            text: "Select Time"
-            onClicked: {
-              DialogService.show({ title: "Select Time", text: "Choose an hour and minute.", primaryText: "OK", secondaryText: "Cancel", dismissible: true, clearContent: true, preferredWidth: 360 })
-              var comp = Qt.createComponent("../resources/components/inputs/TimePicker.qml")
-              if (comp.status === Component.Ready) {
-                var picker = comp.createObject(previewDialogHost.contentContainer, { minuteStep: 5 })
-                previewDialogHost._onAccepted = function(){ console.log("Selected time:", picker.hour + ":" + (picker.minute < 10 ? ("0"+picker.minute) : picker.minute)) }
-              }
-            }
-          }
-          Actions.Button {
             id: openTestDialogBtn
             text: "Test Dialog"
             tonal: true
@@ -89,9 +77,43 @@ FloatingWindow {
               Qt.createQmlObject(qml, previewDialogHost.contentContainer)
             }
           }
+        }
+        // Animated Buttons (MD3E) - corners morph from pill to sharp when pressed
+        Type.Label { text: "Animated Buttons (MD3E)"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true; topMargin: 8 }
+        Row {
+          spacing: 12
+          Actions.AnimatedButton { text: "Primary" }
+          Actions.AnimatedButton { text: "Outlined"; outlined: true }
+          Actions.AnimatedButton { text: "Tonal"; tonal: true }
+          Actions.AnimatedButton { text: "Text"; textButton: true }
+          Actions.AnimatedButton { text: "Cancel"; outlined: true; kind: "cancel" }
+          Actions.AnimatedButton { text: "Danger"; kind: "danger" }
+        }
+        // Grouped Animated Buttons - press to expand
+        Type.Label { text: "Grouped Animated Buttons"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true; topMargin: 8 }
+        Row {
+          spacing: 8
+          Actions.AnimatedGroupedButton {
+            id: groupBtn1
+            text: "Option A"
+            siblingButton: groupBtn2
+            onClicked: console.log("Option A clicked")
+          }
+          Actions.AnimatedGroupedButton {
+            id: groupBtn2
+            text: "Option B"
+            tonal: true
+            siblingButton: groupBtn1
+            onClicked: console.log("Option B clicked")
+          }
+        }
+        // Test windows - wrapped in Flow for better layout
+        Flow {
+          spacing: 8
+          width: area.width - 32
           Actions.Button {
             id: openSearchTestBtn
-            text: "Open Search Test"
+            text: "Search Test"
             outlined: true
             onClicked: {
               var comp = Qt.createComponent("TestSearchWindow.qml")
@@ -101,7 +123,7 @@ FloatingWindow {
           }
           Actions.Button {
             id: openConnTestBtn
-            text: "Connectivity Test"
+            text: "Connectivity"
             outlined: true
             onClicked: {
               var comp = Qt.createComponent("TestConnectivityWindow.qml")
@@ -111,7 +133,7 @@ FloatingWindow {
           }
           Actions.Button {
             id: openSettingsTestBtn
-            text: "Settings Test"
+            text: "Settings"
             outlined: true
             onClicked: {
               var comp = Qt.createComponent("TestSettingsWindow.qml")
@@ -120,12 +142,171 @@ FloatingWindow {
             }
           }
           Actions.Button {
+            id: openInverseCornerTestBtn
+            text: "Inverse Corners"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("InverseCornerTest.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create InverseCornerTest:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openSidePanelTestBtn
+            text: "Side Panel"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("SidePanelDemo.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create SidePanelDemo:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openUserServiceTestBtn
+            text: "User Service"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("TestUserServiceWindow.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create TestUserServiceWindow:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openAppIconServiceTestBtn
+            text: "App Icons"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("TestAppIconService.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create TestAppIconService:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openKeypressWatcherTestBtn
+            text: "Keypress Watcher"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("TestKeypressWatcher.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create TestKeypressWatcher:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openMediaCardTestBtn
+            text: "Media Card"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("TestMediaCard.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create TestMediaCard:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openHamburgerMenuTestBtn
+            text: "Hamburger Menu"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("HamburgerMenuPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create HamburgerMenuPreview:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openNavigationRailTestBtn
+            text: "Navigation Rail"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("NavigationRailPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create NavigationRailPreview:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openNavigationDrawerTestBtn
+            text: "Navigation Drawer"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("NavigationDrawerPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create NavigationDrawerPreview:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openTabsTestBtn
+            text: "Tabs"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("TabsPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create TabsPreview:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openToastTestBtn
+            text: "Toast"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("ToastPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create ToastPreview:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openCarouselTestBtn
+            text: "Carousel"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("CarouselPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create CarouselPreview:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openDatePickerTestBtn
+            text: "Date Picker"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("DatePickerPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create DatePickerPreview:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openTimePickerTestBtn
+            text: "Time Picker"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("TimePickerPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create TimePickerPreview:", comp.errorString())
+            }
+          }
+          Actions.Button {
+            id: openExpressiveLoadingTestBtn
+            text: "Expressive Loading"
+            outlined: true
+            onClicked: {
+              var comp = Qt.createComponent("ExpressiveLoadingPreview.qml")
+              if (comp.status === Component.Ready) comp.createObject(previewWindow)
+              else console.log("Failed to create ExpressiveLoadingPreview:", comp.errorString())
+            }
+          }
+        }
+        Row {
+          spacing: 12
+          Actions.Button {
             id: dlgBtn
             text: "Open Dialog"
             tonal: true
             onClicked: {
               DialogService.show({ title: "Material Dialog", text: "This is a sample dialog.", primaryText: "OK", secondaryText: "Cancel", dismissible: false, clearContent: true })
             }
+          }
+          Actions.Button {
+            id: heroDlgBtn
+            text: "Hero Dialog"
+            tonal: true
+            onClicked: heroDialog.open = true
           }
           Actions.Button {
             id: menuPreviewBtn
@@ -152,6 +333,7 @@ FloatingWindow {
           Actions.SplitButton {
             id: splitRight
             text: "$ 7.49"
+            showIcon: true
             orientation: "right"
             menuItems: [
               { label: "Buy now", onTriggered: function(){ console.log("Buy now") } },
@@ -174,7 +356,7 @@ FloatingWindow {
           padding: 6
           Row {
             spacing: 8
-            Text { text: "WS:"; color: Palette.palette().onSurfaceVariant; anchors.verticalCenter: parent.verticalCenter }
+            Text { text: "WS:"; color: Components.ColorPalette.onSurfaceVariant; anchors.verticalCenter: parent.verticalCenter }
             Nav.IndexSwitcher { id: ws; count: 5; currentIndex: 1; anchors.verticalCenter: parent.verticalCenter }
           }
         }
@@ -203,7 +385,7 @@ FloatingWindow {
               y: tabRow.y + tabRow.height + 2
               height: 3
               radius: 1
-              color: Palette.palette().primary
+              color: Components.ColorPalette.primary
               width: tab0.width
               x: tab0.x
             }
@@ -247,12 +429,42 @@ FloatingWindow {
             Component.onCompleted: animateIndicatorTo(0)
           }
         }
+        // Bottom Navigation Bar demo
+        Column {
+          spacing: 12
+          Type.Label { text: "Bottom Navigation Bar (with labels)"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true; topMargin: 8 }
+          Nav.BottomNavigationBar {
+            id: bottomNav
+            width: Math.min(480, area.width - 32)
+            selectedIndex: 0
+            showLabels: true
+            items: [
+              { icon: "\uE88A", label: "Home", onTriggered: function(){ console.log("Home") } },
+              { icon: "\uE8B6", label: "Search", onTriggered: function(){ console.log("Search") } },
+              { icon: "\uE02E", label: "Library", onTriggered: function(){ console.log("Library") } },
+              { icon: "\uE7FD", label: "Profile", onTriggered: function(){ console.log("Profile") } }
+            ]
+          }
+          Type.Label { text: "Bottom Navigation Bar (no labels)"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true; topMargin: 8 }
+          Nav.BottomNavigationBar {
+            id: bottomNavNoLabels
+            width: Math.min(480, area.width - 32)
+            selectedIndex: 1
+            showLabels: false
+            items: [
+              { icon: "\uE88A", label: "Home", onTriggered: function(){ console.log("Home") } },
+              { icon: "\uE8B6", label: "Search", onTriggered: function(){ console.log("Search") } },
+              { icon: "\uE02E", label: "Library", onTriggered: function(){ console.log("Library") } },
+              { icon: "\uE7FD", label: "Profile", onTriggered: function(){ console.log("Profile") } }
+            ]
+          }
+        }
       }
 
       // System Tray preview
       Column {
         spacing: 6
-        Type.Label { text: "System Tray"; color: Palette.palette().onSurface; pixelSize: 16; bold: true; bottomMargin: 2 }
+        Type.Label { text: "System Tray"; color: Components.ColorPalette.onSurface; pixelSize: 16; bold: true; bottomMargin: 2 }
         Layout.PillContainer {
           padding: 6
           // Icon-only tray inside pill container
@@ -314,7 +526,7 @@ FloatingWindow {
       // Settings tiles preview
       Column {
         spacing: 2
-        Type.Label { text: "Settings Tiles"; color: Palette.palette().onSurface; pixelSize: 16; bold: true; bottomMargin: 2 }
+        Type.Label { text: "Settings Tiles"; color: Components.ColorPalette.onSurface; pixelSize: 16; bold: true; bottomMargin: 2 }
         Column {
           spacing: 2
           Layout.SettingsTile { title: "Test item A"; subtitle: "Subtitle"; groupRole: "top"; clickable: true; onClicked: console.log("tile A") }
@@ -327,8 +539,8 @@ FloatingWindow {
         id: demoWave
         samples: [0.2,0.4,0.6,0.5,0.8,0.3,0.7,0.5,0.4,0.6,0.3,0.2,0.5,0.7]
         progress: 0.45
-        barColor: Palette.palette().surfaceVariant
-        playedColor: Palette.palette().primary
+        barColor: Components.ColorPalette.surfaceVariant
+        playedColor: Components.ColorPalette.primary
         width: previewWindow.width - 64
         height: 28
       }
@@ -337,7 +549,7 @@ FloatingWindow {
       Row {
         spacing: 12
         height: 32
-        Type.Label { text: "Switch"; color: Palette.palette().onSurface; pixelSize: 14; bold: true; verticalAlignment: Text.AlignVCenter; height: parent.height }
+        Type.Label { text: "Switch"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true; verticalAlignment: Text.AlignVCenter; height: parent.height }
         Inputs.Switch { id: a }
         Inputs.Switch { id: b; checked: true }
         Inputs.Switch { id: c; enabled: false }
@@ -345,7 +557,7 @@ FloatingWindow {
       Row {
         spacing: 12
         height: 28
-        Type.Label { text: "Checkbox"; color: Palette.palette().onSurface; pixelSize: 14; bold: true; verticalAlignment: Text.AlignVCenter; height: parent.height }
+        Type.Label { text: "Checkbox"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true; verticalAlignment: Text.AlignVCenter; height: parent.height }
         Inputs.Checkbox { text: "Option A" }
         Inputs.Checkbox { text: "Option B"; checked: true }
         Inputs.Checkbox { text: "Disabled (inactive)"; enabled: false }
@@ -445,7 +657,7 @@ FloatingWindow {
             Text {
             id: selectionLabel
             anchors.verticalCenter: openDialogBtn.verticalCenter
-            color: Palette.palette().onSurface
+            color: Components.ColorPalette.onSurface
               text: "Selection: " + rg1.currentValue
           }
         }
@@ -456,7 +668,7 @@ FloatingWindow {
           spacing: 4
           Inputs.RadioButton { text: "Safe"; value: "safe" }
           Inputs.RadioButton { text: "Danger"; value: "danger"; error: true }
-          Inputs.RadioButton { text: "Cancel"; value: "cancel"; accent: Palette.palette().onSurfaceVariant }
+          Inputs.RadioButton { text: "Cancel"; value: "cancel"; accent: Components.ColorPalette.onSurfaceVariant }
         }
         // Label on the left and vertical layout examples
         Inputs.RadioGroup {
@@ -471,7 +683,7 @@ FloatingWindow {
       Row {
         spacing: 12
         height: 40
-        Type.Label { text: "Segmented"; color: Palette.palette().onSurface; pixelSize: 14; bold: true; verticalAlignment: Text.AlignVCenter; height: parent.height }
+        Type.Label { text: "Segmented"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true; verticalAlignment: Text.AlignVCenter; height: parent.height }
         Actions.SegmentedControl { options: ["One","Two","Three"]; anchors.verticalCenter: parent.verticalCenter; onChanged: console.log("seg", index) }
         Loader {
           id: pillSegLoader
@@ -481,6 +693,16 @@ FloatingWindow {
         }
       }
 
+      Row {
+        spacing: 12
+        height: 40
+        Type.Label { text: "Expander"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true; verticalAlignment: Text.AlignVCenter; height: parent.height }
+        Actions.Expander { id: exp1; anchors.verticalCenter: parent.verticalCenter }
+        Actions.Expander { id: exp2; hasBackground: false; anchors.verticalCenter: parent.verticalCenter }
+        Actions.Expander { id: exp3; size: 32; iconSize: 18; direction: "horizontal"; anchors.verticalCenter: parent.verticalCenter }
+        Type.Label { text: exp1.expanded ? "Expanded" : "Collapsed"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 12; verticalAlignment: Text.AlignVCenter; height: parent.height }
+      }
+
       // Sliders
       Row {
         spacing: 12; height: 40
@@ -488,7 +710,7 @@ FloatingWindow {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           text: Math.round(prevSlider.value * 100) + "%"
-          color: Palette.palette().onSurfaceVariant
+          color: Components.ColorPalette.onSurfaceVariant
           verticalAlignment: Text.AlignVCenter
           height: parent.height
         }
@@ -498,16 +720,42 @@ FloatingWindow {
         Text {
           anchors.verticalCenter: parent.verticalCenter
           text: Math.round(circ.value * 100) + "%"
-          color: Palette.palette().onSurfaceVariant
+          color: Components.ColorPalette.onSurfaceVariant
           verticalAlignment: Text.AlignVCenter
         }
       }
-      // New split linear slider demo
+      // Split linear slider variants demo
       Column {
-        spacing: 6
-        Type.Label { text: "Split Linear Slider"; color: Palette.palette().onSurface; pixelSize: 14; bold: true }
-        Item { width: area.width - 64; height: 24
-          Inputs.SplitLinearSlider { id: splitSlider; anchors.verticalCenter: parent.verticalCenter; width: parent.width; value: 0.35 }
+        spacing: 12
+        Type.Label { text: "Split Linear Sliders"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true }
+        // Standard slider
+        Row {
+          spacing: 12
+          Item { width: (area.width - 64) / 3 - 8; height: 24
+            Inputs.SplitLinearSlider { id: splitSlider; anchors.verticalCenter: parent.verticalCenter; width: parent.width; value: 0.35 }
+          }
+          // Centered slider
+          Item { width: (area.width - 64) / 3 - 8; height: 24
+            Inputs.CenteredSplitSlider { id: centeredSlider; anchors.verticalCenter: parent.verticalCenter; width: parent.width; value: 0.0 }
+          }
+          // Range slider
+          Item { width: (area.width - 64) / 3 - 8; height: 24
+            Inputs.RangeSplitSlider { id: rangeSlider; anchors.verticalCenter: parent.verticalCenter; width: parent.width; minValue: 0.25; maxValue: 0.75 }
+          }
+        }
+        // Value labels
+        Row {
+          spacing: 12
+          Type.Label { text: Math.round(splitSlider.value * 100) + "%"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 11; width: (area.width - 64) / 3 - 8; horizontalAlignment: Text.AlignHCenter }
+          Type.Label { text: Math.round((centeredSlider.value - 0.5) * 200) + "%"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 11; width: (area.width - 64) / 3 - 8; horizontalAlignment: Text.AlignHCenter }
+          Type.Label { text: Math.round(rangeSlider.minValue * 100) + "% - " + Math.round(rangeSlider.maxValue * 100) + "%"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 11; width: (area.width - 64) / 3 - 8; horizontalAlignment: Text.AlignHCenter }
+        }
+        // Type labels
+        Row {
+          spacing: 12
+          Type.Label { text: "Standard"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 10; width: (area.width - 64) / 3 - 8; horizontalAlignment: Text.AlignHCenter }
+          Type.Label { text: "Centered"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 10; width: (area.width - 64) / 3 - 8; horizontalAlignment: Text.AlignHCenter }
+          Type.Label { text: "Range"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 10; width: (area.width - 64) / 3 - 8; horizontalAlignment: Text.AlignHCenter }
         }
       }
 
@@ -518,10 +766,10 @@ FloatingWindow {
       // Rectangular text fields demo
       Column {
         spacing: 6
-        Type.Label { text: "Rect Text Fields"; color: Palette.palette().onSurface; pixelSize: 14; bold: true }
+        Type.Label { text: "Rect Text Fields"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true }
         // Use the requested test layout
         Row { spacing: 16
-          Type.Label { text: "\uF233"; color: Palette.palette().onSurfaceVariant; pixelSize: 18 } // person icon placeholder
+          Type.Label { text: "\uF233"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 18 } // person icon placeholder
           Column { spacing: 12; width: area.width - 96
             Inputs.RectTextField {
               id: rectFirst
@@ -551,7 +799,7 @@ FloatingWindow {
       // Test areas for length validation on multiple field types (<= 20 chars)
       Column {
         spacing: 8
-        Type.Label { text: "Validation Tests (<= 20 chars)"; color: Palette.palette().onSurface; pixelSize: 14; bold: true }
+        Type.Label { text: "Validation Tests (<= 20 chars)"; color: Components.ColorPalette.onSurface; pixelSize: 14; bold: true }
         Row { spacing: 12
       Inputs.TextField {
         id: tfA
@@ -585,8 +833,40 @@ FloatingWindow {
       }
         }
       }
-      Inputs.UnderlineTextField { placeholderText: "Email"; showLeadingIcon: true; leadingIcon: "" }
-      Inputs.UnderlineTextField { placeholderText: "Dense"; dense: true; helperText: "Helper text"; showHelper: true }
+      Column {
+        spacing: 8
+        Type.Label { text: "Filled Text Fields"; color: Components.ColorPalette.onSurface; pixelSize: 16; bold: true; bottomMargin: 4 }
+        Inputs.UnderlineTextField { labelText: "Label"; helperText: "Supporting text"; showHelper: true }
+        Inputs.UnderlineTextField { labelText: "Label"; showTrailingIcon: true; onTrailingIconClicked: text = "" }
+        Inputs.UnderlineTextField { labelText: "Label"; showLeadingIcon: true }
+        Inputs.UnderlineTextField { labelText: "Label"; showLeadingIcon: true; showTrailingIcon: true; onTrailingIconClicked: text = "" }
+        Inputs.UnderlineTextField { labelText: "Label"; multiline: true; width: 400 }
+      }
+
+      // Animated Password Field
+      Column {
+        spacing: 8
+        Type.Label { text: "Animated Password Field"; color: Components.ColorPalette.onSurface; pixelSize: 16; bold: true }
+        Loader {
+          id: animPasswordLoader
+          width: 400
+          height: 56
+          source: "../shell/lockscreen/AnimatedPasswordField.qml"
+          onLoaded: {
+            item.accepted.connect(function() {
+              console.log("Password entered:", item.text)
+              passwordResultText.text = "Password: " + item.text
+              item.clear()
+            })
+          }
+        }
+        Type.Label {
+          id: passwordResultText
+          text: "Type a password and press Enter"
+          color: Components.ColorPalette.onSurfaceVariant
+          pixelSize: 12
+        }
+      }
 
       // Search component preview (pill style)
       Item { width: area.width - 64; height: searchDemo.implicitHeight
@@ -668,6 +948,75 @@ FloatingWindow {
         }
       }
 
+      // Toolbar previews
+      Column {
+        spacing: 12
+        width: area.width - 64
+        Type.Label { text: "Toolbar"; color: Components.ColorPalette.onSurface; pixelSize: 16; bold: true; bottomMargin: 2 }
+        Row {
+          spacing: 20
+          Item { 
+            width: 200
+            height: 60
+            Actions.Toolbar {
+              orientation: "left"
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              actions: [
+                { icon: "content_copy", onTriggered: function(){ console.log("Copy") } },
+                { icon: "content_cut", onTriggered: function(){ console.log("Cut") } },
+                { icon: "content_paste", onTriggered: function(){ console.log("Paste") } }
+              ]
+            }
+          }
+          Item { 
+            width: 200
+            height: 60
+            Actions.Toolbar {
+              orientation: "right"
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
+              actions: [
+                { icon: "undo", onTriggered: function(){ console.log("Undo") } },
+                { icon: "redo", onTriggered: function(){ console.log("Redo") } },
+                { icon: "refresh", onTriggered: function(){ console.log("Refresh") } }
+              ]
+            }
+          }
+        }
+        Row {
+          spacing: 20
+          Item { 
+            width: 60
+            height: 200
+            Actions.Toolbar {
+              orientation: "up"
+              anchors.bottom: parent.bottom
+              anchors.horizontalCenter: parent.horizontalCenter
+              actions: [
+                { icon: "arrow_upward", onTriggered: function(){ console.log("Up") } },
+                { icon: "arrow_downward", onTriggered: function(){ console.log("Down") } },
+                { icon: "close", onTriggered: function(){ console.log("Close") } }
+              ]
+            }
+          }
+          Item { 
+            width: 60
+            height: 200
+            Actions.Toolbar {
+              orientation: "down"
+              anchors.top: parent.top
+              anchors.horizontalCenter: parent.horizontalCenter
+              actions: [
+                { icon: "volume_up", onTriggered: function(){ console.log("Vol+") } },
+                { icon: "volume_down", onTriggered: function(){ console.log("Vol-") } },
+                { icon: "volume_off", onTriggered: function(){ console.log("Mute") } }
+              ]
+            }
+          }
+        }
+      }
+
       // Tooltip hover-delay demo
       Item { width: area.width - 64; height: 80
         Actions.IconButton { id: infoBtn; iconName: "info"; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; onClicked: console.log("info clicked") }
@@ -696,15 +1045,15 @@ FloatingWindow {
       // Additional list sample
       Layout.ListContainer {
         width: previewWindow.width - 64
-        Row { spacing: 8; Text { text: "List item 1"; color: Palette.palette().onSurface } }
-        Row { spacing: 8; Text { text: "List item 2"; color: Palette.palette().onSurface } }
-        Row { spacing: 8; Text { text: "List item 3"; color: Palette.palette().onSurface } }
+        Row { spacing: 8; Text { text: "List item 1"; color: Components.ColorPalette.onSurface } }
+        Row { spacing: 8; Text { text: "List item 2"; color: Components.ColorPalette.onSurface } }
+        Row { spacing: 8; Text { text: "List item 3"; color: Components.ColorPalette.onSurface } }
       }
 
       // RoundedFrame preview (size + corner radius)
       Column {
         spacing: 8
-        Type.Label { text: "RoundedFrame Preview"; color: Palette.palette().onSurface; pixelSize: 16; bold: true }
+        Type.Label { text: "RoundedFrame Preview"; color: Components.ColorPalette.onSurface; pixelSize: 16; bold: true }
         Row {
           spacing: 16
           // Preview frame
@@ -715,28 +1064,28 @@ FloatingWindow {
             cornerRadius: Math.round(0 + rfRadius.value * (60 - 0))
             circular: rfCircle.checked
             source: "https://picsum.photos/seed/rounded-demo/800"
-            borderColor: Palette.palette().outline
+            borderColor: Components.ColorPalette.outline
             borderWidth: rfBorder.checked ? 1 : 0
           }
           // Controls
           Column {
             spacing: 6
             Row { spacing: 8; height: 28
-              Type.Label { text: "Size:"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Type.Label { text: "Size:"; color: Components.ColorPalette.onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
               Inputs.LinearSlider { id: rfSize; value: 0.5; width: 220; anchors.verticalCenter: parent.verticalCenter }
-              Type.Label { text: Math.round(40 + rfSize.value * (220 - 40)) + "px"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Type.Label { text: Math.round(40 + rfSize.value * (220 - 40)) + "px"; color: Components.ColorPalette.onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
             }
             Row { spacing: 8; height: 28
-              Type.Label { text: "Radius:"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Type.Label { text: "Radius:"; color: Components.ColorPalette.onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
               Inputs.LinearSlider { id: rfRadius; value: 0.2; width: 220; enabled: !rfCircle.checked; anchors.verticalCenter: parent.verticalCenter }
-              Type.Label { text: Math.round(0 + rfRadius.value * (60 - 0)) + "px"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Type.Label { text: Math.round(0 + rfRadius.value * (60 - 0)) + "px"; color: Components.ColorPalette.onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
             }
             Row { spacing: 8; height: 28
-              Type.Label { text: "Circle:"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Type.Label { text: "Circle:"; color: Components.ColorPalette.onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
               Inputs.Switch { id: rfCircle; anchors.verticalCenter: parent.verticalCenter }
             }
             Row { spacing: 8; height: 28
-              Type.Label { text: "Border:"; color: Palette.palette().onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
+              Type.Label { text: "Border:"; color: Components.ColorPalette.onSurfaceVariant; height: parent.height; verticalAlignment: Text.AlignVCenter }
               Inputs.Switch { id: rfBorder; checked: true; anchors.verticalCenter: parent.verticalCenter }
             }
           }
@@ -746,7 +1095,7 @@ FloatingWindow {
       // Messages list with dividers and avatars
       Column {
         spacing: 6
-        Type.Label { text: "Messages"; color: Palette.palette().onSurface; pixelSize: 16; bold: true }
+        Type.Label { text: "Messages"; color: Components.ColorPalette.onSurface; pixelSize: 16; bold: true }
         Layout.ListContainer {
           width: previewWindow.width - 64
           // Row 1
@@ -760,11 +1109,11 @@ FloatingWindow {
               anchors.rightMargin: 8
               anchors.verticalCenter: parent.verticalCenter
               spacing: 2
-              Type.Label { text: "Brunch this weekend?"; pixelSize: 14; bold: true; color: Palette.palette().onSurface; maxLines: 1; elide: Text.ElideRight }
-              Type.Label { text: "Alejandro Ortega – I’ll be in your neighborhood…"; pixelSize: 12; color: Palette.palette().onSurfaceVariant; maxLines: 1; elide: Text.ElideRight }
+              Type.Label { text: "Brunch this weekend?"; pixelSize: 14; bold: true; color: Components.ColorPalette.onSurface; maxLines: 1; elide: Text.ElideRight }
+              Type.Label { text: "Alejandro Ortega – I’ll be in your neighborhood…"; pixelSize: 12; color: Components.ColorPalette.onSurfaceVariant; maxLines: 1; elide: Text.ElideRight }
             }
           }
-          Layout.Divider { orientation: "horizontal"; thickness: 1; lineColor: Palette.palette().outline; insetStart: 58; width: parent.width }
+          Layout.Divider { orientation: "horizontal"; thickness: 1; lineColor: Components.ColorPalette.outline; insetStart: 58; width: parent.width }
           // Row 2
           Item {
             width: parent.width; height: 60
@@ -776,11 +1125,11 @@ FloatingWindow {
               anchors.rightMargin: 8
               anchors.verticalCenter: parent.verticalCenter
               spacing: 2
-              Type.Label { text: "Good healthy lunch idea"; pixelSize: 14; bold: true; color: Palette.palette().onSurface; maxLines: 1; elide: Text.ElideRight }
-              Type.Label { text: "My coworker just sent this recipe to me and I…"; pixelSize: 12; color: Palette.palette().onSurfaceVariant; maxLines: 1; elide: Text.ElideRight }
+              Type.Label { text: "Good healthy lunch idea"; pixelSize: 14; bold: true; color: Components.ColorPalette.onSurface; maxLines: 1; elide: Text.ElideRight }
+              Type.Label { text: "My coworker just sent this recipe to me and I…"; pixelSize: 12; color: Components.ColorPalette.onSurfaceVariant; maxLines: 1; elide: Text.ElideRight }
             }
           }
-          Layout.Divider { orientation: "horizontal"; thickness: 1; lineColor: Palette.palette().outline; insetStart: 58; width: parent.width }
+          Layout.Divider { orientation: "horizontal"; thickness: 1; lineColor: Components.ColorPalette.outline; insetStart: 58; width: parent.width }
           // Row 3
           Item {
             width: parent.width; height: 60
@@ -792,8 +1141,8 @@ FloatingWindow {
               anchors.rightMargin: 8
               anchors.verticalCenter: parent.verticalCenter
               spacing: 2
-              Type.Label { text: "Graduación de Inés"; pixelSize: 14; bold: true; color: Palette.palette().onSurface; maxLines: 1; elide: Text.ElideRight }
-              Type.Label { text: "Hola hija mía, aqui tienes unas fotos preciosas…"; pixelSize: 12; color: Palette.palette().onSurfaceVariant; maxLines: 1; elide: Text.ElideRight }
+              Type.Label { text: "Graduación de Inés"; pixelSize: 14; bold: true; color: Components.ColorPalette.onSurface; maxLines: 1; elide: Text.ElideRight }
+              Type.Label { text: "Hola hija mía, aqui tienes unas fotos preciosas…"; pixelSize: 12; color: Components.ColorPalette.onSurfaceVariant; maxLines: 1; elide: Text.ElideRight }
             }
           }
         }
@@ -802,26 +1151,68 @@ FloatingWindow {
       // Filter Chips area
       Column {
         spacing: 8
-        Type.Label { text: "Filter Chips"; color: Palette.palette().onSurface; pixelSize: 16; bold: true }
+        Type.Label { text: "Filter Chips"; color: Components.ColorPalette.onSurface; pixelSize: 16; bold: true }
         Row { spacing: 8
           InputChips.FilterChip { text: "Music" }
           InputChips.FilterChip { text: "Sports"; checked: true }
           InputChips.FilterChip { text: "News" }
           InputChips.FilterChip { text: "Tech" }
         }
+        Type.Label { text: "Pill Variant"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 13; topMargin: 4 }
+        Row { spacing: 8
+          InputChips.FilterChip { text: "Music"; pill: true }
+          InputChips.FilterChip { text: "Sports"; checked: true; pill: true }
+          InputChips.FilterChip { text: "News"; pill: true }
+          InputChips.FilterChip { text: "Tech"; pill: true }
+        }
+        Type.Label { text: "No Border"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 13; topMargin: 4 }
+        Row { spacing: 8
+          InputChips.FilterChip { text: "Music"; noBorder: true }
+          InputChips.FilterChip { text: "Sports"; checked: true; noBorder: true }
+          InputChips.FilterChip { text: "News"; noBorder: true }
+          InputChips.FilterChip { text: "Tech"; noBorder: true }
+        }
+        Type.Label { text: "Primary When Selected"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 13; topMargin: 4 }
+        Row { spacing: 8
+          InputChips.FilterChip { text: "Music"; primaryWhenSelected: true }
+          InputChips.FilterChip { text: "Sports"; checked: true; primaryWhenSelected: true }
+          InputChips.FilterChip { text: "News"; primaryWhenSelected: true }
+          InputChips.FilterChip { text: "Tech"; primaryWhenSelected: true }
+        }
+        Type.Label { text: "Combined: Pill + Primary"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 13; topMargin: 4 }
+        Row { spacing: 8
+          InputChips.FilterChip { text: "Music"; pill: true; primaryWhenSelected: true }
+          InputChips.FilterChip { text: "Sports"; checked: true; pill: true; primaryWhenSelected: true }
+          InputChips.FilterChip { text: "News"; pill: true; primaryWhenSelected: true }
+          InputChips.FilterChip { text: "Tech"; pill: true; primaryWhenSelected: true }
+        }
+        Type.Label { text: "Segmented Style"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 13; topMargin: 4 }
+        Row { spacing: 3
+          InputChips.SegmentedFilterChip { text: "Music"; isFirst: true }
+          InputChips.SegmentedFilterChip { text: "Sports"; checked: true }
+          InputChips.SegmentedFilterChip { text: "News" }
+          InputChips.SegmentedFilterChip { text: "Tech"; isLast: true }
+        }
+        Type.Label { text: "Custom Symbols"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 13; topMargin: 4 }
+        Row { spacing: 8
+          InputChips.FilterChip { text: "Favorite"; symbol: "★"; checked: true }
+          InputChips.FilterChip { text: "Home"; symbol: "🏠" }
+          InputChips.FilterChip { text: "Alert"; symbol: "⚠"; primaryWhenSelected: true }
+          InputChips.FilterChip { text: "Music"; symbol: "♪"; pill: true; checked: true }
+        }
       }
 
       // Loaders
       Row { spacing: 8; height: 32
         Feedback.CircularLoader { size: 24 }
-        Feedback.CircularLoader { size: 36; color: Palette.palette().secondary }
-        Feedback.CircularLoader { size: 28; color: Palette.palette().tertiary; strokeWidth: 4 }
+        Feedback.CircularLoader { size: 36; color: Components.ColorPalette.secondary }
+        Feedback.CircularLoader { size: 28; color: Components.ColorPalette.tertiary; strokeWidth: 4 }
       }
 
       // Circular progress demo
       Row { spacing: 16
         P.CircularProgressContainer { size: 80; progress: 0.65; centerText: "65%" }
-        P.CircularProgressContainer { size: 64; progress: 0.3; progressColor: Palette.palette().secondary; centerText: "30%" }
+        P.CircularProgressContainer { size: 64; progress: 0.3; progressColor: Components.ColorPalette.secondary; centerText: "30%" }
       }
 
       // Notification card demo
@@ -862,11 +1253,25 @@ FloatingWindow {
           notifColumn.requestRoleRefresh()
         }
       }
+
+
     }
   }
 
   // Dialog host for DialogService button above
   Dialogs.Dialog { id: previewDialogHost }
+  
+  // Hero dialog
+  Dialogs.HeroDialog {
+    id: heroDialog
+    heroIcon: "restart"
+    heroLabel: "Restart System"
+    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris."
+    primaryText: "Restart"
+    secondaryText: "Cancel"
+    onAccepted: console.log("Hero dialog accepted")
+    onRejected: console.log("Hero dialog rejected")
+  }
 
   // Animated test menu overlay
   MenuComp.HamburgerMenu {

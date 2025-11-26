@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
-import "../../resources/colors.js" as Palette
+import "../../resources/components" as Components
 import "../../resources/components/inputs" as Inputs
 import "../../resources/components/typography" as Typography
 
@@ -14,7 +14,7 @@ Item {
     anchors.fill: parent
     spacing: 10
 
-    Typography.Label { text: "Search"; pixelSize: 16; color: Palette.palette().onSurface }
+    Typography.Label { text: "Search"; pixelSize: 16; color: Components.ColorPalette.onSurface }
     Inputs.UnderlineTextField {
       placeholderText: "Type to search"
       text: sharedState ? sharedState.searchQuery : ""
@@ -23,7 +23,7 @@ Item {
     }
     Typography.Label {
       text: "Current query: " + (sharedState ? sharedState.searchQuery : "")
-      color: Palette.palette().onSurfaceVariant
+      color: Components.ColorPalette.onSurfaceVariant
       wrapMode: Text.Wrap
       Layout.fillWidth: true
     }

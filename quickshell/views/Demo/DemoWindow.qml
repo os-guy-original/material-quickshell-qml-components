@@ -3,7 +3,7 @@ import QtQuick.Layouts 1.15
 import QtQml 2.15
 import Quickshell
 import "."
-import "../../resources/colors.js" as Palette
+import "../../resources/components" as Components
 import "../../resources/components/layout" as UILayout
 import "../../resources/components/typography" as Typography
 import "../../resources/components/navigation" as Nav
@@ -16,7 +16,7 @@ FloatingWindow {
   implicitWidth: 900
   implicitHeight: 640
 
-  Rectangle { anchors.fill: parent; color: Palette.palette().background }
+  Rectangle { anchors.fill: parent; color: Components.ColorPalette.background }
 
   // Shared state across tabs (QtObject so bindings react to property changes)
   property QtObject sharedState: shared
@@ -50,7 +50,7 @@ FloatingWindow {
       RowLayout {
         Layout.fillWidth: true
         spacing: 12
-        Typography.Label { text: "Demo"; pixelSize: 18; color: Palette.palette().onSurface }
+        Typography.Label { text: "Demo"; pixelSize: 18; color: Components.ColorPalette.onSurface }
         Item { Layout.fillWidth: true }
       }
 
@@ -72,14 +72,14 @@ FloatingWindow {
   // Bottom navigation bar like Android, full width of the window
   Rectangle {
     id: bottomNav
-    color: Palette.palette().surface
+    color: Components.ColorPalette.surface
     height: 64
     anchors.left: parent.left
     anchors.right: parent.right
     anchors.bottom: parent.bottom
     border.width: 0
     // top divider
-    Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 1; color: Palette.palette().outline; opacity: 0.24 }
+    Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; height: 1; color: Components.ColorPalette.outline; opacity: 0.24 }
 
     RowLayout {
       anchors.fill: parent

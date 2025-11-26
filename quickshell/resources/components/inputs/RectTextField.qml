@@ -51,7 +51,7 @@ Item {
     border.width: borderWidth
     border.color: error ? Palette.palette().error
                          : (input.activeFocus ? Palette.palette().primary
-                                               : Qt.darker(Palette.palette().outline, 1.15))
+                                               : (Palette.palette().isDarkMode ? Qt.lighter(Palette.palette().outline, 1.3) : Qt.darker(Palette.palette().outline, 1.3)))
     opacity: enabled ? 1.0 : 0.38
     Behavior on border.color { ColorAnimation { duration: 120; easing.type: Easing.InOutQuad } }
   }

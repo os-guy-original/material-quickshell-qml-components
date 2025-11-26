@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
   id: root
@@ -20,10 +20,9 @@ Item {
   Rectangle {
     anchors.fill: parent
     radius: root.cornerRadius
-    color: Palette.isDarkMode() ? Qt.lighter(Palette.palette().surfaceVariant, 1.02)
-                                : Qt.darker(Palette.palette().surfaceVariant, 1.02)
+    color: Components.ColorPalette.surfaceVariant
     border.width: 1
-    border.color: Palette.palette().outline
+    border.color: Components.ColorPalette.outline
   }
 
   RowLayout {
@@ -71,8 +70,8 @@ Item {
               ctx.closePath()
             }
             // Use the previous selected fill as the UNSELECTED base per request
-            var base = Palette.palette().surface
-            var fill = Palette.isDarkMode() ? Qt.lighter(base, 1.18) : Qt.lighter(base, 1.05)
+            var base = Components.ColorPalette.surface
+            var fill = Qt.lighter(base, 1.1)
             ctx.fillStyle = fill
             rr(tl, tr, br, bl)
             ctx.fill()
@@ -108,10 +107,13 @@ Item {
               ctx.arcTo(0, 0, tl, 0, tl)
               ctx.closePath()
             }
-            // Transparent fill: no fill, only subtle inner stroke for definition
+            // Selected fill: matches active chip color
+            ctx.fillStyle = Components.ColorPalette.primaryContainer
             rr(tl, tr, br, bl)
+            ctx.fill()
+            // Transparent fill: no fill, only subtle inner stroke for definition
             ctx.globalAlpha = 0.12
-            ctx.strokeStyle = Palette.palette().outline
+            ctx.strokeStyle = Components.ColorPalette.outline
             ctx.lineWidth = 1
             ctx.stroke()
             ctx.globalAlpha = 1.0
@@ -126,8 +128,7 @@ Item {
           anchors.top: parent.top
           anchors.bottom: parent.bottom
           anchors.left: parent.left
-          color: Palette.isDarkMode() ? Qt.lighter(Palette.palette().outline, 1.1)
-                                      : Qt.darker(Palette.palette().outline, 0.9)
+          color: Components.ColorPalette.outline
           opacity: 0.5
         }
 
@@ -147,7 +148,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             onPaint: {
               var ctx = getContext('2d'); ctx.reset();
-              ctx.strokeStyle = Palette.palette().onSurface;
+              ctx.strokeStyle = Components.ColorPalette.onSurface;
               ctx.lineWidth = 2; ctx.lineCap = 'round';
               ctx.beginPath();
               ctx.moveTo(2, 7);
@@ -161,7 +162,7 @@ Item {
           Text {
             id: textItem
             text: Array.isArray(root.options) ? String(root.options[index]) : ""
-            color: Palette.palette().onSurface
+            color: Components.ColorPalette.onSurface
             font.pixelSize: 14
             elide: Text.ElideRight
             verticalAlignment: Text.AlignVCenter

@@ -1,9 +1,10 @@
 import QtQuick 2.15
+import "../../colors.js" as Palette
 
 Item {
     id: root
     property string name: ""
-    property color color: "#FFFFFF"
+    property color color: Palette.palette().onSurface
     property int size: 24
     implicitWidth: size
     implicitHeight: size
@@ -48,6 +49,47 @@ Item {
                     ctx.moveTo(w*0.40, h*0.20); ctx.lineTo(w*0.40, h*0.82);
                     ctx.moveTo(w*0.40, h*0.50); ctx.lineTo(w*0.65, h*0.30);
                     ctx.moveTo(w*0.40, h*0.50); ctx.lineTo(w*0.65, h*0.70);
+                    ctx.stroke();
+                    break;
+                case 'add':
+                    ctx.beginPath();
+                    ctx.moveTo(w*0.50, h*0.25); ctx.lineTo(w*0.50, h*0.75);
+                    ctx.moveTo(w*0.25, h*0.50); ctx.lineTo(w*0.75, h*0.50);
+                    ctx.stroke();
+                    break;
+                case 'remove':
+                    ctx.beginPath();
+                    ctx.moveTo(w*0.25, h*0.50); ctx.lineTo(w*0.75, h*0.50);
+                    ctx.stroke();
+                    break;
+                case 'chevron_left':
+                    ctx.beginPath();
+                    ctx.moveTo(w*0.62, h*0.22); ctx.lineTo(w*0.38, h*0.50); ctx.lineTo(w*0.62, h*0.78);
+                    ctx.stroke();
+                    break;
+                case 'chevron_right':
+                    ctx.beginPath();
+                    ctx.moveTo(w*0.38, h*0.22); ctx.lineTo(w*0.62, h*0.50); ctx.lineTo(w*0.38, h*0.78);
+                    ctx.stroke();
+                    break;
+                case 'arrow_drop_down':
+                    ctx.beginPath();
+                    ctx.moveTo(w*0.30, h*0.38); ctx.lineTo(w*0.50, h*0.62); ctx.lineTo(w*0.70, h*0.38);
+                    ctx.fill();
+                    break;
+                case 'arrow_drop_up':
+                    ctx.beginPath();
+                    ctx.moveTo(w*0.30, h*0.62); ctx.lineTo(w*0.50, h*0.38); ctx.lineTo(w*0.70, h*0.62);
+                    ctx.fill();
+                    break;
+                case 'expand_more':
+                    ctx.beginPath();
+                    ctx.moveTo(w*0.25, h*0.38); ctx.lineTo(w*0.50, h*0.62); ctx.lineTo(w*0.75, h*0.38);
+                    ctx.stroke();
+                    break;
+                case 'expand_less':
+                    ctx.beginPath();
+                    ctx.moveTo(w*0.25, h*0.62); ctx.lineTo(w*0.50, h*0.38); ctx.lineTo(w*0.75, h*0.62);
                     ctx.stroke();
                     break;
                 default:

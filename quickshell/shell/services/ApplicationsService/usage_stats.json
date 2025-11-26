@@ -1,0 +1,65 @@
+{
+  "favorites": [],
+  "usageStats": {
+    "nm-connection-editor": {
+      "count": 6,
+      "lastUsed": 1764111144057
+    },
+    "org.kde.drkonqi.coredump.gui": {
+      "count": 1,
+      "lastUsed": 1763247143210
+    },
+    "app.zen_browser.zen": {
+      "count": 5,
+      "lastUsed": 1763932130227
+    },
+    "blueman-adapters": {
+      "count": 1,
+      "lastUsed": 1763258318041
+    },
+    "blueman-manager": {
+      "count": 1,
+      "lastUsed": 1763258320901
+    },
+    "bssh": {
+      "count": 1,
+      "lastUsed": 1763272108065
+    },
+    "org.gnome.Nautilus": {
+      "count": 2,
+      "lastUsed": 1763565595466
+    },
+    "com.github.neithern.g4music": {
+      "count": 1,
+      "lastUsed": 1763280049537
+    },
+    "nvidia-settings": {
+      "count": 1,
+      "lastUsed": 1763280079292
+    },
+    "org.gnome.FileRoller": {
+      "count": 2,
+      "lastUsed": 1763311227890
+    },
+    "org.kde.dolphin": {
+      "count": 1,
+      "lastUsed": 1763311233042
+    },
+    "io.missioncenter.MissionCenter": {
+      "count": 1,
+      "lastUsed": 1763311239922
+    },
+    "firefox": {
+      "count": 1,
+      "lastUsed": 1763311723684
+    },
+    "kde_wacom_tabletfinder": {
+      "count": 1,
+      "lastUsed": 1763607327287
+    },
+    "kiro": {
+      "count": 1,
+      "lastUsed": 1763925859760
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 import "../icons" as Icon
 
 Item {
@@ -11,11 +11,11 @@ Item {
     property int diameter: 36
     signal toggled(bool checked)
 
-    readonly property color activeBg: Palette.palette().primary
-    readonly property color activeFg: Palette.palette().onPrimary
-    readonly property color inactiveBg: Palette.isDarkMode() ? Qt.lighter(Palette.palette().surface, 1.08)
-                                                            : Qt.darker(Palette.palette().surface, 1.03)
-    readonly property color inactiveFg: Palette.palette().onSurface
+    readonly property color activeBg: Components.ColorPalette.primary
+    readonly property color activeFg: Components.ColorPalette.onPrimary
+    readonly property color inactiveBg: Components.ColorPalette.isDarkMode ? Qt.lighter(Components.ColorPalette.surface, 1.08)
+                                                            : Qt.darker(Components.ColorPalette.surface, 1.03)
+    readonly property color inactiveFg: Components.ColorPalette.onSurface
 
     implicitWidth: background.implicitWidth
     implicitHeight: background.implicitHeight
@@ -65,7 +65,7 @@ Item {
     Rectangle {
         anchors.fill: background
         radius: background.radius
-        color: Palette.palette().onSurface
+        color: Components.ColorPalette.onSurface
         opacity: mouseArea.pressed ? 0.14 : (mouseArea.containsMouse ? 0.06 : 0.0)
         visible: root.enabled
         Behavior on opacity { NumberAnimation { duration: 110; easing.type: Easing.InOutQuad } }

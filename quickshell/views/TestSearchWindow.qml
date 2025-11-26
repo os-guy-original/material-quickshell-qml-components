@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import Quickshell
-import "../resources/colors.js" as Palette
+import "../resources/components" as Components
 import "../resources/components/search" as SearchComp
 import "../resources/components/layout" as Layout
 import "../resources/components/typography" as Type
@@ -15,7 +15,7 @@ FloatingWindow {
   // Behavior: overlay | filter
   property string searchBehavior: "filter"
 
-  Rectangle { anchors.fill: parent; color: Palette.palette().background }
+  Rectangle { anchors.fill: parent; color: Components.ColorPalette.background }
 
   // Settings tiles demo content
   property var allItems: [
@@ -85,7 +85,7 @@ FloatingWindow {
       visible: win.searchBehavior === "filter"
       Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.InOutQuad } }
       // Content
-      Type.Label { id: resultsTitle; text: "Results"; color: Palette.palette().onSurfaceVariant; pixelSize: 12; anchors.top: parent.top; anchors.left: parent.left; topMargin: 0; bottomMargin: 4 }
+      Type.Label { id: resultsTitle; text: "Results"; color: Components.ColorPalette.onSurfaceVariant; pixelSize: 12; anchors.top: parent.top; anchors.left: parent.left; topMargin: 0; bottomMargin: 4 }
       ListView {
         id: resultsList
         anchors.left: parent.left

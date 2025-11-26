@@ -1,0 +1,3 @@
+module shell.services.AppIconService
+
+singleton AppIconService 1.0 AppIconService.qml

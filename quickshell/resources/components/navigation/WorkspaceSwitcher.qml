@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
     id: root
@@ -31,7 +31,7 @@ Item {
         width: root.bgSize
         height: root.bgSize
         radius: height / 2
-        color: Palette.palette().primary
+        color: Components.ColorPalette.primary
         y: (root.height - height) / 2
         x: root.itemCenterX(root.currentIndex)
         transformOrigin: Item.Center
@@ -56,7 +56,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: (index + 1)
-                    color: active ? Palette.palette().onPrimary : Palette.palette().onSurface
+                    color: active ? Components.ColorPalette.onPrimary : Components.ColorPalette.onSurface
                     font.pixelSize: 14
                     font.bold: true
                     Behavior on color { ColorAnimation { duration: 120; easing.type: Easing.InOutQuad } }
@@ -98,7 +98,6 @@ Item {
     function goTo(index) {
         if (index < 0 || index >= root.count) return
         if (index === root.currentIndex && !switchAnim.running) return
-        switchAnim.stop()
         if (switchAnim.running) switchAnim.stop()
         if (pulseX.running) pulseX.stop()
         if (pulseY.running) pulseY.stop()

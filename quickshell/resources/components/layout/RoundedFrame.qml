@@ -1,5 +1,4 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
 
 /*
   RoundedFrame
@@ -24,6 +23,8 @@ Item {
   property bool circular: false
   // Optional image to display inside the frame (cropped)
   property url source: ""
+  // Image fill mode: "crop" (aspect fill) or "fit" (aspect fit)
+  property string fillMode: "crop"
   // Optional fill color if you want a solid framed color background
   property color fillColor: "transparent"
   // Expose a way to set an overlay/border if desired later
@@ -50,28 +51,190 @@ Item {
     antialiasing: true
   }
   
-  // Image with Canvas-based clipping mask
-  Canvas {
-    id: imgCanvas
+  // Crossfade animation support
+  property bool enableCrossfade: false
+  property int crossfadeDuration: 300
+  property string _prevSource: ""
+  property string _currentSource: ""
+  
+  onSourceChanged: {
+    if (enableCrossfade && _currentSource && source && source !== _currentSource) {
+      _prevSource = _currentSource
+      prevCanvas.imageItem.source = _currentSource
+      prevLayer.opacity = 1
+      currentLayer.opacity = 0
+    }
+    _currentSource = source ? source.toString() : ""
+  }
+  
+  Component.onCompleted: {
+    _currentSource = source ? source.toString() : ""
+  }
+  
+  // Previous image layer (for crossfade out)
+  Item {
+    id: prevLayer
     anchors.fill: parent
     anchors.margins: root.padding
-    visible: !!root.source
+    visible: root.enableCrossfade && !!root._prevSource
+    opacity: 1
+    clip: true
     
-    property var imageItem: Image {
-      source: root.source
-      asynchronous: true
-      cache: true
-      visible: false
-      onStatusChanged: {
-        if (status === Image.Ready) {
-          imgCanvas.loadImage(source)
-          imgCanvas.requestPaint()
+    Canvas {
+      id: prevCanvas
+      anchors.fill: parent
+      opacity: prevLayer.opacity
+      
+      property var imageItem: Image {
+        source: root._prevSource
+        asynchronous: true
+        cache: true
+        visible: false
+        onStatusChanged: {
+          if (status === Image.Ready) {
+            prevCanvas.loadImage(source)
+            prevCanvas.requestPaint()
+          }
         }
+      }
+      
+      onPaint: {
+        var ctx = getContext("2d")
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = "high"
+        ctx.save()
+        ctx.clearRect(0, 0, width, height)
+        
+        var rad = root._effectiveRadius
+        if (root.circular) {
+          var r = Math.min(width, height) / 2
+          ctx.beginPath()
+          ctx.arc(width / 2, height / 2, r, 0, Math.PI * 2)
+        } else {
+          ctx.beginPath()
+          ctx.moveTo(rad, 0)
+          ctx.lineTo(width - rad, 0)
+          ctx.arcTo(width, 0, width, rad, rad)
+          ctx.lineTo(width, height - rad)
+          ctx.arcTo(width, height, width - rad, height, rad)
+          ctx.lineTo(rad, height)
+          ctx.arcTo(0, height, 0, height - rad, rad)
+          ctx.lineTo(0, rad)
+          ctx.arcTo(0, 0, rad, 0, rad)
+          ctx.closePath()
+        }
+        ctx.clip()
+        
+        if (isImageLoaded(root._prevSource)) {
+          var img = imageItem
+          var imgRatio = img.sourceSize.width / img.sourceSize.height
+          var frameRatio = width / height
+          
+          var drawX = 0
+          var drawY = 0
+          var drawW = width
+          var drawH = height
+          
+          if (root.fillMode === "fit") {
+            if (imgRatio > frameRatio) {
+              drawH = width / imgRatio
+              drawY = (height - drawH) / 2
+            } else {
+              drawW = height * imgRatio
+              drawX = (width - drawW) / 2
+            }
+          } else {
+            if (imgRatio > frameRatio) {
+              drawW = height * imgRatio
+              drawX = (width - drawW) / 2
+            } else {
+              drawH = width / imgRatio
+              drawY = (height - drawH) / 2
+            }
+          }
+          
+          ctx.drawImage(root._prevSource, drawX, drawY, drawW, drawH)
+        }
+        
+        ctx.restore()
       }
     }
     
-    onPaint: {
+    Behavior on opacity {
+      NumberAnimation { 
+        duration: root.crossfadeDuration
+        easing.type: Easing.InOutCubic
+        onRunningChanged: {
+          if (!running && prevLayer.opacity === 0) {
+            root._prevSource = ""
+          }
+        }
+      }
+    }
+  }
+  
+  // Current image layer
+  Item {
+    id: currentLayer
+    anchors.fill: parent
+    anchors.margins: root.padding
+    visible: !!root.source
+    opacity: 1
+    clip: true
+    
+    // Use layer rendering for better quality
+    layer.enabled: true
+    layer.smooth: true
+    layer.textureSize: Qt.size(width * 2, height * 2)
+    
+    Canvas {
+      id: imgCanvas
+      anchors.fill: parent
+      opacity: currentLayer.opacity
+      antialiasing: true
+      renderStrategy: Canvas.Cooperative
+      renderTarget: Canvas.FramebufferObject
+      
+      property var imageItem: Image {
+        source: root.source
+        asynchronous: true
+        cache: true
+        smooth: true
+        mipmap: true
+        antialiasing: true
+        visible: false
+        onStatusChanged: {
+          if (status === Image.Ready) {
+            try {
+              imgCanvas.loadImage(source)
+              imgCanvas.requestPaint()
+              if (root.enableCrossfade && root._prevSource) {
+                fadeInTimer.start()
+              } else {
+                currentLayer.opacity = 1
+              }
+            } catch (e) {
+              console.warn("RoundedFrame: Error loading image:", source, e)
+            }
+          } else if (status === Image.Error) {
+            console.warn("RoundedFrame: Failed to load image:", source)
+          }
+        }
+      }
+      
+      Timer {
+        id: fadeInTimer
+        interval: 50
+        onTriggered: {
+          currentLayer.opacity = 1
+          prevLayer.opacity = 0
+        }
+      }
+      
+      onPaint: {
       var ctx = getContext("2d")
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = "high"
       ctx.save()
       ctx.clearRect(0, 0, width, height)
       
@@ -98,10 +261,40 @@ Item {
       
       // Draw the image if loaded
       if (isImageLoaded(root.source)) {
-        // Calculate aspect-fill positioning
-        var imgW = width
-        var imgH = height
-        ctx.drawImage(root.source, 0, 0, imgW, imgH)
+        var img = imageItem
+        var imgRatio = img.sourceSize.width / img.sourceSize.height
+        var frameRatio = width / height
+        
+        var drawX = 0
+        var drawY = 0
+        var drawW = width
+        var drawH = height
+        
+        if (root.fillMode === "fit") {
+          // Aspect fit - show entire image, may have letterboxing
+          if (imgRatio > frameRatio) {
+            // Image is wider - fit to width
+            drawH = width / imgRatio
+            drawY = (height - drawH) / 2
+          } else {
+            // Image is taller - fit to height
+            drawW = height * imgRatio
+            drawX = (width - drawW) / 2
+          }
+        } else {
+          // Aspect fill (crop) - fill entire frame
+          if (imgRatio > frameRatio) {
+            // Image is wider - fit to height and crop sides
+            drawW = height * imgRatio
+            drawX = (width - drawW) / 2
+          } else {
+            // Image is taller - fit to width and crop top/bottom
+            drawH = width / imgRatio
+            drawY = (height - drawH) / 2
+          }
+        }
+        
+        ctx.drawImage(root.source, drawX, drawY, drawW, drawH)
       }
       
       ctx.restore()
@@ -119,6 +312,14 @@ Item {
           imgCanvas.loadImage(root.source)
           imgCanvas.requestPaint()
         }
+      }
+    }
+    }
+    
+    Behavior on opacity {
+      NumberAnimation { 
+        duration: root.crossfadeDuration
+        easing.type: Easing.InOutCubic
       }
     }
   }

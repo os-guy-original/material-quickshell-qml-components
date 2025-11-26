@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
-import "../../resources/colors.js" as Palette
+import "../../resources/components" as Components
 import "../../resources/components/typography" as Typography
 import "../../resources/components/inputs" as Inputs
 
@@ -14,7 +14,7 @@ Item {
     anchors.fill: parent
     spacing: 10
 
-    Typography.Label { text: "Profile"; pixelSize: 16; color: Palette.palette().onSurface }
+    Typography.Label { text: "Profile"; pixelSize: 16; color: Components.ColorPalette.onSurface }
 
     RowLayout {
       spacing: 8
@@ -27,11 +27,11 @@ Item {
 
     Typography.Label {
       text: "Wi‑Fi: " + ((sharedState && sharedState.wifiEnabled) ? "On" : "Off")
-      color: Palette.palette().onSurfaceVariant
+      color: Components.ColorPalette.onSurfaceVariant
     }
     Typography.Label {
       text: "Bluetooth: " + ((sharedState && sharedState.bluetoothEnabled) ? "On" : "Off")
-      color: Palette.palette().onSurfaceVariant
+      color: Components.ColorPalette.onSurfaceVariant
     }
   }
 }

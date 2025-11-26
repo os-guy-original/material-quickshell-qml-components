@@ -1,13 +1,13 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
     id: root
     // Simple media-style waveform/progress visualization
     property var samples: [] // array of 0..1 values
     property real progress: 0.0 // 0..1 playback position
-    property color barColor: Palette.palette().primary
-    property color playedColor: Palette.palette().onPrimary
+    property color barColor: Components.ColorPalette.isDarkMode ? Components.ColorPalette.surfaceVariant : Qt.darker(Components.ColorPalette.background, 1.08)
+    property color playedColor: Components.ColorPalette.onPrimary
     property int barWidth: 3
     property int gap: 2
     property int minHeightPx: 2

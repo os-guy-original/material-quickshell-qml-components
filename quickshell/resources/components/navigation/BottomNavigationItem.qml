@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
     id: root
@@ -18,15 +18,15 @@ Item {
         Rectangle {
             id: indicator
             width: 24; height: 24; radius: 12
-            color: selected ? Palette.palette().secondaryContainer : "transparent"
+            color: selected ? Components.ColorPalette.secondaryContainer : "transparent"
             border.width: selected ? 0 : 1
-            border.color: Palette.palette().outline
+            border.color: Components.ColorPalette.outline
             Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.InOutQuad } }
         }
 
         Text {
             id: label
-            color: selected ? Palette.palette().onSecondaryContainer : Palette.palette().onSurface
+            color: selected ? Components.ColorPalette.onSecondaryContainer : Components.ColorPalette.onSurface
             font.pixelSize: 12
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight

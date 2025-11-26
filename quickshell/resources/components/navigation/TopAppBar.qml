@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Rectangle {
     id: root
@@ -8,8 +8,8 @@ Rectangle {
     default property alias actionItems: actions.data
 
     property real barHeight: 56
-    property color backgroundColor: Palette.palette().surface
-    property color foregroundColor: Palette.palette().onSurface
+    property color backgroundColor: Components.ColorPalette.surface
+    property color foregroundColor: Components.ColorPalette.onSurface
 
     color: backgroundColor
     height: barHeight

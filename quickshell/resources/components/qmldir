@@ -1,0 +1,5 @@
+module resources.components
+
+singleton ColorPalette 1.0 ColorPalette.qml
+Carousel 1.0 layout/Carousel.qml
+CornerSticker 1.0 layout/CornerSticker.qml

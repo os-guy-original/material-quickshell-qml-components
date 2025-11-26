@@ -1,7 +1,9 @@
 import QtQuick 2.15
 import QtQml 2.15
-import "../../colors.js" as Palette
+import Qt5Compat.GraphicalEffects
+import ".." as Components
 import "../icons" as Icon
+import "../feedback" as Feedback
 
 /*
   Floating Action Button (FAB)
@@ -34,7 +36,7 @@ Item {
   readonly property bool isExtended: !menuOpen && (extendedStatic || (autoExtendOnHover && hovered && text.length > 0))
   property var menuItems: []
   property bool menuOpen: false
-  property color accent: Palette.palette().primary
+  property color accent: Components.ColorPalette.primary
   signal triggered()
   // Rounded square radius when compact
   property int cornerRadiusSquare: Math.max(8, Math.round(diameter * 0.22))
@@ -44,19 +46,70 @@ Item {
   height: diameter
   Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
-  // Background (rounded square normally, circular in close mode)
+  // Track pressed state for shadow
+  property bool _pressed: false
+
+  // Shadow source rectangle (behind everything)
   Rectangle {
-    id: bg
+    id: shadowSource
     anchors.fill: parent
     radius: menuOpen ? (height / 2) : cornerRadiusSquare
-    color: menuOpen ? Palette.palette().secondaryContainer : accent
-    border.width: 0
+    color: Components.ColorPalette.surface
+    visible: false
+    Behavior on radius { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  }
+
+  // Shadow effect
+  DropShadow {
+    anchors.fill: shadowSource
+    source: shadowSource
+    horizontalOffset: 0
+    verticalOffset: root._pressed ? 6 : 4
+    radius: root._pressed ? 18 : 12
+    samples: 25
+    color: Qt.rgba(0, 0, 0, root._pressed ? 0.35 : 0.25)
+    spread: 0
+    Behavior on verticalOffset { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+    Behavior on radius { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+    Behavior on color { ColorAnimation { duration: 100; easing.type: Easing.OutCubic } }
+  }
+
+  // Background shape with ripple
+  Item {
+    id: bgShape
+    anchors.fill: parent
+    layer.enabled: true
+    layer.smooth: true
+    layer.effect: OpacityMask {
+      maskSource: Item {
+        width: bgShape.width
+        height: bgShape.height
+        Rectangle {
+          anchors.fill: parent
+          radius: menuOpen ? (height / 2) : cornerRadiusSquare
+          smooth: true
+          Behavior on radius { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        }
+      }
+    }
+    
+    Rectangle {
+      id: bg
+      anchors.fill: parent
+      color: menuOpen ? Components.ColorPalette.primary : Components.ColorPalette.onPrimary
+      Behavior on color { ColorAnimation { duration: 140; easing.type: Easing.OutCubic } }
+    }
+    
+    Feedback.RippleEffect {
+      id: rippleEffect
+      rippleColor: menuOpen ? Components.ColorPalette.onPrimary : Qt.rgba(0.95, 0.95, 0.95, 1)
+    }
   }
 
   // Icon/plus morph to X when menuOpen
   Item {
     id: glyph
-    width: diameter * 0.44
+    width: diameter * 0.35
     height: width
     anchors.left: parent.left
     anchors.leftMargin: Math.round((root.height - height) / 2)
@@ -66,37 +119,46 @@ Item {
       id: bar1
       anchors.centerIn: parent
       width: parent.width
-      height: 2.2
+      height: 2
       radius: 1
-      color: menuOpen ? Palette.palette().onSecondaryContainer : Palette.palette().onPrimary
+      color: menuOpen ? Components.ColorPalette.onPrimary : Qt.rgba(0.95, 0.95, 0.95, 1)
       rotation: menuOpen ? 45 : 0
       Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+      Behavior on color { ColorAnimation { duration: 140; easing.type: Easing.OutCubic } }
     }
     Rectangle {
       id: bar2
       anchors.centerIn: parent
       width: parent.width
-      height: 2.2
+      height: 2
       radius: 1
-      color: menuOpen ? Palette.palette().onSecondaryContainer : Palette.palette().onPrimary
+      color: menuOpen ? Components.ColorPalette.onPrimary : Qt.rgba(0.95, 0.95, 0.95, 1)
       rotation: menuOpen ? -45 : 90
       Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+      Behavior on color { ColorAnimation { duration: 140; easing.type: Easing.OutCubic } }
     }
   }
 
-  // Extended label text
-  Text {
-    id: txt
-    visible: root.isExtended
-    text: root.text
-    color: Palette.palette().onPrimary
+  // Extended label text with negative-erase animation
+  Item {
+    id: textContainer
     anchors.verticalCenter: parent.verticalCenter
     anchors.left: glyph.right
     anchors.leftMargin: 10
-    font.pixelSize: 14
-    elide: Text.ElideRight
-    opacity: root.isExtended ? 1.0 : 0.0
-    Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+    anchors.right: parent.right
+    anchors.rightMargin: 14
+    height: txt.height
+    clip: true
+    visible: root.isExtended
+    
+    Text {
+      id: txt
+      text: root.text
+      color: Qt.rgba(0.95, 0.95, 0.95, 1)
+      font.pixelSize: 14
+      x: root.isExtended ? 0 : txt.implicitWidth
+      Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+    }
   }
 
   // Menu fan-out: pill buttons above the FAB, right edges aligned with FAB right edge
@@ -124,13 +186,34 @@ Item {
         scale: menuOpen ? 1.0 : 0.96
         Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-        Rectangle {
+        Item {
+          id: menuItemContainer
           anchors.fill: parent
-          radius: height / 2
-          // Use primary container for vivid pills
-          color: Palette.palette().primaryContainer
-          border.width: 0
+          layer.enabled: true
+          layer.smooth: true
+          layer.effect: OpacityMask {
+            maskSource: Item {
+              width: menuItemContainer.width
+              height: menuItemContainer.height
+              Rectangle {
+                anchors.fill: parent
+                radius: height / 2
+                smooth: true
+              }
+            }
+          }
+          
+          Rectangle {
+            anchors.fill: parent
+            color: Components.ColorPalette.onPrimary
+          }
+          
+          Feedback.RippleEffect {
+            id: menuItemRipple
+            rippleColor: Qt.rgba(0.95, 0.95, 0.95, 1)
+          }
         }
+        
         // Optional icon on the left if provided in model
         Item {
           id: iconBox
@@ -140,7 +223,7 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
           anchors.left: parent.left
           anchors.leftMargin: 10
-          Icon.Icon { anchors.fill: parent; name: modelData && modelData.icon ? modelData.icon : ""; color: Palette.palette().onPrimaryContainer; size: parent.width }
+          Icon.Icon { anchors.fill: parent; name: modelData && modelData.icon ? modelData.icon : ""; color: Qt.rgba(0.95, 0.95, 0.95, 1); size: parent.width }
         }
         Text {
           id: lbl
@@ -148,14 +231,18 @@ Item {
           anchors.left: iconBox.visible ? iconBox.right : parent.left
           anchors.leftMargin: 12
           text: (modelData && modelData.label) ? modelData.label : ""
-          color: Palette.palette().onPrimaryContainer
+          color: Qt.rgba(0.95, 0.95, 0.95, 1)
           font.pixelSize: 14
           font.italic: false
           font.weight: Font.Medium
         }
         MouseArea {
+          id: menuItemMouseArea
           anchors.fill: parent
           hoverEnabled: true
+          onPressed: menuItemRipple.startHold(mouseX, mouseY)
+          onReleased: menuItemRipple.endHold()
+          onCanceled: menuItemRipple.endHold()
           onClicked: {
             console.log("FAB action clicked:", (modelData && modelData.label) ? modelData.label : "<no label>")
             try { if (modelData && modelData.onTriggered) modelData.onTriggered() } catch (e) {}
@@ -167,10 +254,14 @@ Item {
   }
 
   MouseArea {
+    id: mainMouseArea
     anchors.fill: parent
     hoverEnabled: true
     onEntered: root.hovered = true
     onExited: root.hovered = false
+    onPressed: { root._pressed = true; rippleEffect.startHold(mouseX, mouseY) }
+    onReleased: { root._pressed = false; rippleEffect.endHold() }
+    onCanceled: { root._pressed = false; rippleEffect.endHold() }
     onClicked: {
       var hasMenu = Array.isArray(root.menuItems) && root.menuItems.length > 0
       if (hasMenu) {

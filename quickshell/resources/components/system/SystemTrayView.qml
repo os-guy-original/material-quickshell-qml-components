@@ -1,43 +1,38 @@
 import QtQuick 2.15
-import QtQml.Models 2.15
 import Quickshell
 import Quickshell.Services.SystemTray
 import "../Menu" as MenuComp
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
   id: trayRoot
   property var parentWindow: null
-  // Optional external overlay menu instance (HamburgerMenu) to use
-  // If not provided, an internal one scoped to this component will be used
   property var externalMenuOverlay: null
   property int iconSize: 22
   property int spacing: 6
-  implicitHeight: row.implicitHeight
-  implicitWidth: row.implicitWidth
+  implicitHeight: iconSize
+  implicitWidth: row.width
 
   Row {
     id: row
-    // Let implicit size drive the parent; do not stretch
     spacing: trayRoot.spacing
+    anchors.centerIn: parent
 
     Repeater {
-      id: rep
       model: SystemTray.items
       delegate: Item {
         id: iconBox
-        width: trayRoot.iconSize + 10
-        height: trayRoot.iconSize + 10
+        width: trayRoot.iconSize
+        height: trayRoot.iconSize
         property var itemRef: modelData
         property bool hovered: false
 
-        // Material You-style hover state layer (circular)
         Rectangle {
           anchors.centerIn: parent
-          width: trayRoot.iconSize + 12
+          width: trayRoot.iconSize
           height: width
           radius: width / 2
-          color: Palette.palette().onSurface
+          color: Components.ColorPalette.onSurface
           opacity: hovered ? 0.08 : 0.0
           antialiasing: true
           Behavior on opacity { NumberAnimation { duration: 110; easing.type: Easing.InOutQuad } }
@@ -50,27 +45,39 @@ Item {
           height: trayRoot.iconSize
           fillMode: Image.PreserveAspectFit
           smooth: true
+          asynchronous: false
+          visible: status === Image.Ready || status === Image.Loading
+          onStatusChanged: {
+            if (status === Image.Error) {
+              visible = false
+            }
+          }
         }
 
         MouseArea {
           anchors.fill: parent
+          anchors.margins: -4
           hoverEnabled: true
+          acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
           onEntered: iconBox.hovered = true
           onExited: iconBox.hovered = false
           onClicked: function(mouse) {
             if (!iconBox.itemRef) return
             if (mouse.button === Qt.RightButton) {
               var menu = trayRoot.externalMenuOverlay || trayMenu
-              menu.items = trayRoot.menuItemsFor(iconBox.itemRef, iconBox)
-              if (menu.openAtItem) menu.openAtItem(iconBox)
+              var items = trayRoot.menuItemsFor(iconBox.itemRef, iconBox)
+              if (items && items.length > 0) {
+                menu.menuItems = items
+                menu.openAt(0, 0)
+              }
             } else if (mouse.button === Qt.LeftButton) {
               if (iconBox.itemRef.onlyMenu && iconBox.itemRef.hasMenu) {
                 trayRoot.openAppMenuAt(iconBox.itemRef, iconBox)
               } else {
-                try { iconBox.itemRef.activate() } catch (e) { console.log("activate failed:", e) }
+                try { iconBox.itemRef.activate() } catch (e) {}
               }
             } else if (mouse.button === Qt.MiddleButton) {
-              try { iconBox.itemRef.secondaryActivate() } catch (e2) { console.log("secondaryActivate failed:", e2) }
+              try { iconBox.itemRef.secondaryActivate() } catch (e) {}
             }
           }
         }
@@ -112,26 +119,77 @@ Item {
     }
   }
 
+  QsMenuOpener {
+    id: menuOpener
+    property var pendingCallback: null
+    onChildrenChanged: {
+      if (pendingCallback && children && children.values.length > 0) {
+        var cb = pendingCallback
+        pendingCallback = null
+        cb()
+      }
+    }
+  }
+  
   function menuItemsFor(item, iconItem) {
-    var label = (item && item.title && item.title.length) ? item.title : (item && item.id ? item.id : "Tray Item")
-    var hasMenu = item && item.hasMenu
+    if (item && item.menu) {
+      menuOpener.menu = item.menu
+      if (menuOpener.menu && menuOpener.menu.updateLayout) {
+        menuOpener.menu.updateLayout()
+      }
+      // Wait for children to populate before returning items
+      if (menuOpener.children && menuOpener.children.values.length > 0) {
+        return buildMenuItems(menuOpener)
+      }
+      // Set up callback to open menu once children are ready
+      if (!menuOpener.pendingCallback) {
+        menuOpener.pendingCallback = function() {
+          var menu = trayRoot.externalMenuOverlay || trayMenu
+          menu.menuItems = buildMenuItems(menuOpener)
+          if (menu.menuItems && menu.menuItems.length > 0) menu.openAt(0, 0)
+        }
+      }
+      return []
+    }
     var onlyMenu = item && item.onlyMenu
     var items = []
-    items.push({ label: label, enabled: false })
     if (!onlyMenu) {
       items.push({ label: "Activate", onTriggered: function(){ try { item.activate() } catch(e){} } })
       items.push({ label: "Secondary action", onTriggered: function(){ try { item.secondaryActivate() } catch(e){} } })
     }
-    if (hasMenu) {
-      items.push({ label: "App menu…", onTriggered: function(){ trayRoot.openAppMenuAt(item, iconItem) } })
+    return items
+  }
+  
+  function buildMenuItems(opener) {
+    var items = []
+    var lastWasSeparator = false
+    for (var i = 0; i < opener.children.values.length; i++) {
+      var entry = opener.children.values[i]
+      if (entry.isSeparator) {
+        if (!lastWasSeparator && items.length > 0) {
+          items.push({ isSeparator: true })
+          lastWasSeparator = true
+        }
+      } else {
+        lastWasSeparator = false
+        var hasChildren = entry.hasChildren
+        var submenu = null
+        if (hasChildren) {
+          var subOpener = Qt.createQmlObject('import QtQuick 2.15; import Quickshell; QsMenuOpener {}', trayRoot)
+          subOpener.menu = entry
+          submenu = buildMenuItems(subOpener)
+          subOpener.destroy()
+        }
+        items.push({ 
+          label: entry.text,
+          enabled: entry.enabled,
+          submenu: submenu,
+          onTriggered: hasChildren ? null : (function(e) { return function() { e.triggered() } })(entry)
+        })
+      }
     }
-    if (item && item.tooltipTitle) {
-      items.push({ label: "— " + item.tooltipTitle, enabled: false })
-    }
-    if (item && item.tooltipDescription) {
-      var desc = String(item.tooltipDescription)
-      if (desc.length > 60) desc = desc.slice(0, 57) + "…"
-      items.push({ label: desc, enabled: false })
+    if (items.length > 0 && items[items.length - 1].isSeparator) {
+      items.pop()
     }
     return items
   }

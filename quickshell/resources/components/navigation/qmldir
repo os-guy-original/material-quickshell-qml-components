@@ -1,0 +1,6 @@
+module NavigationComp
+
+IndexSwitcher 1.0 IndexSwitcher.qml
+NavigationDrawer 1.0 NavigationDrawer.qml
+NavigationRail 1.0 NavigationRail.qml
+Tabs 1.0 Tabs.qml

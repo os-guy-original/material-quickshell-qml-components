@@ -1,10 +1,10 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
   id: root
   property string text: ""
-  property color color: Palette.palette().onSurface
+  property color color: Components.ColorPalette.onSurface
   property int pixelSize: 14
   // Set a sensible default UI font; 'Sans Serif' maps to the platform's default sans font
   property string fontFamily: "Sans Serif"

@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import Quickshell
 import Quickshell.Wayland
-import "../resources/colors.js" as Palette
+import "../resources/components" as Components
 import "../resources/components/actions" as Actions
 
 // Layer-shell based fullscreen overlay dialog (Wayland)
@@ -34,7 +34,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         // Transparent black scrim for dimming effect
-        color: "#000000"
+        color: Components.ColorPalette.shadow
         opacity: layerDlg.visible ? 0.45 : 0.0
         visible: true
         Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.InOutQuad } }
@@ -48,7 +48,7 @@ PanelWindow {
         width: Math.max(320, Math.min(520, content.implicitWidth + 32))
         height: content.implicitHeight + 32
         radius: 12
-        color: Palette.palette().surface
+        color: Components.ColorPalette.surface
         anchors.centerIn: parent
         opacity: layerDlg.visible ? 1.0 : 0.0
         scale: layerDlg.visible ? 1.0 : 0.97
@@ -64,8 +64,8 @@ PanelWindow {
             x: 16
             y: 16
             spacing: 12
-            Text { text: layerDlg.titleText; color: Palette.palette().onSurface; font.pixelSize: 18 }
-            Text { text: layerDlg.bodyText; color: Palette.palette().onSurfaceVariant; wrapMode: Text.Wrap; width: card.width - 32 }
+            Text { text: layerDlg.titleText; color: Components.ColorPalette.onSurface; font.pixelSize: 18 }
+            Text { text: layerDlg.bodyText; color: Components.ColorPalette.onSurfaceVariant; wrapMode: Text.Wrap; width: card.width - 32 }
             Row {
                 spacing: 8
                 anchors.right: parent.right

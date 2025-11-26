@@ -1,0 +1,7 @@
+NotificationCard 1.0 NotificationCard.qml
+NotificationGroup 1.0 NotificationGroup.qml
+CircularLoader 1.0 CircularLoader.qml
+ProgressBar 1.0 ProgressBar.qml
+RippleEffect 1.0 RippleEffect.qml
+Tooltip 1.0 Tooltip.qml
+WaveformBar 1.0 WaveformBar.qml

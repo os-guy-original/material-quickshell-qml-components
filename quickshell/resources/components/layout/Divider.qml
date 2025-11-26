@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
   id: root
@@ -7,7 +7,7 @@ Item {
   // "horizontal" draws a horizontal rule; "vertical" draws a vertical rule
   property string orientation: "horizontal"
   // Color of the divider line
-  property color lineColor: Palette.palette().outline
+  property color lineColor: Components.ColorPalette.outline
   // Thickness in pixels (device pixels)
   property real thickness: 1
   // Insets from the start/end edges (start=end left/right for horizontal; top/bottom for vertical)

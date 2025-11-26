@@ -80,7 +80,21 @@ Item {
 
   Component.onCompleted: console.log("RightClickMenu created. overlay wh:", overlay.width, overlay.height)
   onVisibleChanged: console.log("RightClickMenu overlay visible:", visible, "open:", open)
-  function close() { open = false; anchorItem = null }
+  
+  function close() {
+    open = false
+    // Keep overlay visible during fade-out animation
+    closeTimer.start()
+  }
+  
+  // Delay cleanup until fade animation completes
+  Timer {
+    id: closeTimer
+    interval: 150 // Match panel opacity animation duration
+    onTriggered: {
+      anchorItem = null
+    }
+  }
 
   // Click-away catcher: ignore the first release that opened the menu
   MouseArea {
@@ -88,10 +102,17 @@ Item {
     visible: overlay.open
     enabled: visible
     acceptedButtons: Qt.AllButtons
-    propagateComposedEvents: true
-    onClicked: {
-      if (overlay._ignoreFirstClick) { overlay._ignoreFirstClick = false; return }
+    propagateComposedEvents: false
+    z: 0
+    onClicked: function(mouse) {
+      console.log("RightClickMenu: overlay clicked, _ignoreFirstClick:", overlay._ignoreFirstClick)
+      if (overlay._ignoreFirstClick) { 
+        overlay._ignoreFirstClick = false
+        mouse.accepted = true
+        return
+      }
       overlay.close()
+      mouse.accepted = true
     }
   }
 

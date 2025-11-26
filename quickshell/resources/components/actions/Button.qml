@@ -1,5 +1,7 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import Qt5Compat.GraphicalEffects
+import ".." as Components
+import "../feedback" as Feedback
 
 Item {
     id: root
@@ -12,7 +14,7 @@ Item {
     property bool enabled: true
     property bool busy: false
     // Accent decides contained/outlined/text foreground; default primary
-    property color accent: Palette.palette().primary
+    property color accent: Components.ColorPalette.primary
     // Semantic variants: "default" | "cancel" | "danger"
     property string kind: "default"
     property bool hovered: false
@@ -26,34 +28,65 @@ Item {
     // Optional subtle morph when menuOpen
     width: _collapsedWidth
     height: _collapsedHeight
+    clip: true
     Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
     Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
+    // Border (outside masking for outlined buttons)
     Rectangle {
-        id: background
+        id: borderRect
         anchors.fill: parent
         radius: height / 2
-        color: !enabled ? Qt.rgba(0.30,0.30,0.30,1) : (outlined || textButton ? "transparent" : (tonal ? Palette.palette().secondaryContainer : root._backgroundColor()))
+        color: "transparent"
         border.width: outlined ? 1 : 0
-        border.color: !enabled ? Qt.rgba(0.45,0.45,0.45,1) : (tonal ? Palette.palette().secondary : root._accentColor())
-        opacity: 1.0
+        border.color: !enabled ? Qt.rgba(0.45,0.45,0.45,1) : (tonal ? Components.ColorPalette.primary : root._accentColor())
+    }
 
-        Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.InOutQuad } }
-        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.InOutQuad } }
-        Behavior on radius { NumberAnimation { duration: 160; easing.type: Easing.InOutQuad } }
-        Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-        Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+    // Background with ripple - using layer.effect for masking
+    Item {
+        id: background
+        anchors.fill: parent
+        layer.enabled: true
+        layer.smooth: true
+        layer.effect: OpacityMask {
+            maskSource: Item {
+                width: background.width
+                height: background.height
+                Rectangle {
+                    anchors.fill: parent
+                    radius: height / 2
+                    smooth: true
+                }
+            }
+        }
+        
+        // Background color
+        Rectangle {
+            id: backgroundRect
+            anchors.fill: parent
+            color: !enabled ? Qt.rgba(0.30,0.30,0.30,1) : (outlined || textButton ? "transparent" : (tonal ? Components.ColorPalette.primaryContainer : root._backgroundColor()))
+            opacity: 1.0
+
+            Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.InOutQuad } }
+            Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.InOutQuad } }
+        }
+        
+        // Ripple effect
+        Feedback.RippleEffect {
+            id: rippleEffect
+            rippleColor: root._rippleColor()
+        }
     }
 
     // State overlay to darken on hover/press like Material You
     Rectangle {
         id: stateOverlay
-        anchors.fill: background
-        radius: background.radius
+        anchors.fill: parent
+        radius: height / 2
         visible: enabled
         color: textButton || outlined
-               ? Palette.palette().onSurface
-                : (tonal ? Palette.palette().onSecondaryContainer : (root.kind === "danger" ? Palette.palette().onError : Palette.palette().onPrimary))
+               ? Components.ColorPalette.onSurface
+                : (tonal ? Components.ColorPalette.onPrimaryContainer : (root.kind === "danger" ? Components.ColorPalette.onError : Components.ColorPalette.onPrimary))
         opacity: pressed ? 0.12 : (hovered ? 0.08 : 0.0)
         Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.InOutQuad } }
     }
@@ -62,7 +95,7 @@ Item {
         id: label
         anchors.centerIn: parent
         color: !enabled ? Qt.rgba(0.82,0.82,0.82,1)
-             : (textButton ? root._accentColor() : (outlined ? root._accentColor() : (tonal ? Palette.palette().onSecondaryContainer : (root.kind === "danger" ? Palette.palette().onError : Palette.palette().onPrimary))))
+             : (textButton ? root._accentColor() : (outlined ? root._accentColor() : (tonal ? Components.ColorPalette.onPrimaryContainer : (root.kind === "danger" ? Components.ColorPalette.onError : Components.ColorPalette.onPrimary))))
         text: "Button"
         font.pixelSize: 14
         opacity: 1.0
@@ -71,14 +104,30 @@ Item {
     }
 
     function _accentColor() {
-        if (root.kind === "danger") return Palette.palette().error
-        if (root.kind === "cancel") return Palette.palette().onSurfaceVariant
+        if (root.kind === "danger") return Components.ColorPalette.error
+        if (root.kind === "cancel") return Components.ColorPalette.onSurfaceVariant
         return root.accent
     }
     function _backgroundColor() {
-        if (root.kind === "danger") return Palette.palette().error
-        if (root.kind === "cancel") return Qt.rgba(0,0,0,0) // transparent for text/outlined by default
+        if (root.kind === "danger") return Components.ColorPalette.error
+        if (root.kind === "cancel") return Components.ColorPalette.surfaceVariant
         return root.accent
+    }
+    function _rippleColor() {
+        // Contained button (default): onPrimary
+        // Outlined or text button: onSurface
+        // Tonal button: onPrimaryContainer
+        // Danger button: onError
+        if (root.kind === "danger") {
+            return Components.ColorPalette.onError
+        }
+        if (outlined || textButton) {
+            return Components.ColorPalette.onSurface
+        }
+        if (tonal) {
+            return Components.ColorPalette.onPrimaryContainer
+        }
+        return Components.ColorPalette.onPrimary
     }
 
     MouseArea {
@@ -86,22 +135,35 @@ Item {
         enabled: root.enabled
         hoverEnabled: true
         onClicked: root.clicked()
-        onPressedChanged: if (enabled) root.pressed = pressed
+        onPressed: {
+            if (enabled) {
+                root.pressed = true
+                rippleEffect.startHold(mouseX, mouseY)
+            }
+        }
+        onReleased: {
+            if (enabled) {
+                root.pressed = false
+                rippleEffect.endHold()
+            }
+        }
+        onCanceled: {
+            if (enabled) {
+                root.pressed = false
+                rippleEffect.endHold()
+            }
+        }
         onEntered: if (enabled) root.hovered = true
-        onExited: if (enabled) { root.hovered = false; root.pressed = false }
+        onExited: if (enabled) { root.hovered = false; root.pressed = false; rippleEffect.endHold() }
     }
 
     // Optional simple busy indicator dot
     Rectangle {
         visible: busy
         width: 8; height: 8; radius: 4
-        color: textButton || outlined ? accent : Palette.palette().onPrimary
+        color: textButton || outlined ? accent : Components.ColorPalette.onPrimary
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: label.left
         anchors.rightMargin: 8
     }
-
-    
 }
-
-

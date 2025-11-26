@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
     id: root
@@ -18,9 +18,9 @@ Item {
         id: bg
         anchors.fill: parent
         radius: 12
-        color: selected ? Palette.palette().secondaryContainer : "transparent"
+        color: selected ? Components.ColorPalette.secondaryContainer : "transparent"
         border.width: selected ? 0 : 1
-        border.color: Palette.palette().outline
+        border.color: Components.ColorPalette.outline
         opacity: enabled ? 1.0 : 0.38
         Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.InOutQuad } }
         Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.InOutQuad } }
@@ -31,7 +31,7 @@ Item {
         anchors.left: parent.left
         anchors.leftMargin: paddingH
         anchors.verticalCenter: parent.verticalCenter
-        color: selected ? Palette.palette().onSecondaryContainer : Palette.palette().onSurface
+        color: selected ? Components.ColorPalette.onSecondaryContainer : Components.ColorPalette.onSurface
         font.pixelSize: 13
         elide: Text.ElideRight
     }

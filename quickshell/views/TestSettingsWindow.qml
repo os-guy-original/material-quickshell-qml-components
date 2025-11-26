@@ -1,7 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import Quickshell
-import "../resources/colors.js" as Palette
+import "../resources/components" as Components
 import "../resources/components/typography" as Type
 import "../resources/components/layout" as UILayout
 import "../resources/components/inputs" as Inputs
@@ -14,7 +14,7 @@ FloatingWindow {
   implicitWidth: 600
   implicitHeight: 420
 
-  Rectangle { anchors.fill: parent; color: Palette.palette().background }
+  Rectangle { anchors.fill: parent; color: Components.ColorPalette.background }
 
   UILayout.Container {
     anchors.fill: parent
@@ -22,7 +22,7 @@ FloatingWindow {
     ColumnLayout {
       spacing: 0
 
-      Type.Label { text: "Settings"; pixelSize: 18; color: Palette.palette().onSurface }
+      Type.Label { text: "Settings"; pixelSize: 18; color: Components.ColorPalette.onSurface }
 
       UILayout.SettingsTile {
         title: "Notifications"
@@ -38,7 +38,7 @@ FloatingWindow {
         groupRole: "middle"
         clickable: false
         padding: 12
-        Inputs.Switch { onToggled: function(){ Palette.toggleMode() } }
+        Inputs.Switch { onToggled: function(){ Components.ColorPalette.toggleDarkMode() } }
       }
       UILayout.SettingsTile {
         title: "Account"

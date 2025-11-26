@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import Quickshell
-import "../resources/colors.js" as Palette
+import "../resources/components" as Components
 import "../resources/components/actions" as Actions
 import "../resources/components/feedback" as Feedback
 import "../resources/components/inputs" as Inputs

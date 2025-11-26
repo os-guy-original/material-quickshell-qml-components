@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Row {
     id: root
@@ -7,17 +7,23 @@ Row {
     property int currentIndex: 0
     property bool enabled: true
     signal changed(int index)
-    spacing: 0
+    spacing: 3
 
     Repeater {
         model: options.length
         delegate: Item {
             property bool selected: index === root.currentIndex
             property real t: selected ? 1 : 0
+            property bool itemPressed: false
+            property bool isFirst: index === 0
+            property bool isLast: index === (root.options.length - 1)
+            property real innerRadius: 6
             width: Math.max(60, textItem.implicitWidth + 20)
             height: 32
-            Behavior on t { NumberAnimation { duration: 180; easing.type: Easing.InOutQuad } }
+            Behavior on t { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
             onTChanged: bg.requestPaint()
+            onItemPressedChanged: bg.requestPaint()
+            onSelectedChanged: { t = selected ? 1 : 0; bg.requestPaint() }
 
             Canvas {
                 id: bg
@@ -27,13 +33,18 @@ Row {
                     ctx.reset()
                     var w = width
                     var h = height
-                    var full = h / 2
-                    var softBaseLeft = (index === 0 ? full : 2)
-                    var softBaseRight = (index === (root.options.length - 1) ? full : 2)
-                    var rTL = softBaseLeft + (full - softBaseLeft) * t
-                    var rBL = rTL
-                    var rTR = softBaseRight + (full - softBaseRight) * t
-                    var rBR = rTR
+                    var pillRadius = h / 2
+                    
+                    // Selected button is always pill-shaped
+                    // Unselected buttons: position-based corners, but morph outer corners when pressed
+                    var sharpRadius = 4
+                    var outerRadius = itemPressed ? sharpRadius : pillRadius
+                    
+                    var rTL = selected ? pillRadius : (isFirst ? outerRadius : innerRadius)
+                    var rTR = selected ? pillRadius : (isLast ? outerRadius : innerRadius)
+                    var rBR = selected ? pillRadius : (isLast ? outerRadius : innerRadius)
+                    var rBL = selected ? pillRadius : (isFirst ? outerRadius : innerRadius)
+                    
                     function drawRoundRect(radTL, radTR, radBR, radBL) {
                         ctx.beginPath()
                         ctx.moveTo(radTL, 0)
@@ -47,56 +58,46 @@ Row {
                         ctx.arcTo(0, 0, radTL, 0, radTL)
                         ctx.closePath()
                     }
+                    
                     // unselected base
-                    ctx.fillStyle = Palette.palette().surfaceVariant
+                    ctx.fillStyle = Components.ColorPalette.surfaceVariant
                     drawRoundRect(rTL, rTR, rBR, rBL)
                     ctx.fill()
+                    
                     // overlay primary with animated alpha for selection
                     if (t > 0) {
                         ctx.globalAlpha = t
-                        ctx.fillStyle = Palette.palette().primary
-                        drawRoundRect(full, full, full, full)
+                        ctx.fillStyle = Components.ColorPalette.primary
+                        drawRoundRect(rTL, rTR, rBR, rBL)
                         ctx.fill()
                         ctx.globalAlpha = 1.0
                     }
                 }
-                Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.InOutQuad } }
             }
 
             Text {
                 id: textItem
                 anchors.centerIn: parent
                 text: root.options[index]
-                color: selected ? Palette.palette().onPrimary : Palette.palette().onSurface
+                color: selected ? Components.ColorPalette.onPrimary : Components.ColorPalette.onSurface
                 font.pixelSize: 14
                 Behavior on color { ColorAnimation { duration: 140; easing.type: Easing.InOutQuad } }
             }
 
             MouseArea {
+                id: mouseArea
                 anchors.fill: parent
                 enabled: root.enabled
                 hoverEnabled: true
+                onPressedChanged: parent.itemPressed = pressed
+                onExited: parent.itemPressed = false
                 onClicked: {
                     if (root.currentIndex === index) return
-                    var target = index
-                    var steps = 6
-                    var s = 0
-                    var timer = Qt.createQmlObject('import QtQuick 2.15; Timer { interval: 16; repeat: true }', root)
-                    timer.triggered.connect(function() {
-                        s++
-                        bg.requestPaint()
-                        if (s >= steps) {
-                            timer.stop(); timer.destroy();
-                            root.currentIndex = target
-                            root.changed(target)
-                            bg.requestPaint()
-                        }
-                    })
-                    timer.start()
+                    root.currentIndex = index
+                    root.changed(index)
                 }
             }
 
-            onSelectedChanged: { t = selected ? 1 : 0; bg.requestPaint() }
             Connections { target: root; function onCurrentIndexChanged() { t = selected ? 1 : 0; bg.requestPaint() } }
         }
     }

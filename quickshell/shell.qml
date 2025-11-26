@@ -2,7 +2,6 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import Quickshell
-import "resources/colors.js" as Palette
 import "resources/components/DialogService.js" as DialogService
 import "shell/Shell.qml" as AppShell
 

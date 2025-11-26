@@ -1,12 +1,12 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 import "../../metrics.js" as Metrics
 
 Item {
   id: root
   property real progress: 0.0 // 0..1
-  property color filledColor: Palette.palette().primary
-  property color emptyColor: Palette.palette().surfaceVariant
+  property color filledColor: Components.ColorPalette.primary
+  property color emptyColor: Components.ColorPalette.isDarkMode ? Components.ColorPalette.surfaceVariant : Qt.darker(Components.ColorPalette.background, 1.15)
   property real amplitude: 8
   property real wavelength: 32
   property real strokeWidth: 4

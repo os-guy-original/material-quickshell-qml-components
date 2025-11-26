@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQml 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 import "../actions" as Actions
 
 /*
@@ -24,13 +24,12 @@ import "../actions" as Actions
 Item {
   id: overlay
   anchors.fill: parent
-  // Show only while open/fading; don't keep overlay alive when closed
-  visible: open || panel.opacity > 0.01
-  // Ensure above normal content and typical containers; below menus/Hamburger
+  visible: open || closing
   z: 998
 
-  // Attach to window root so tooltip draws above other branches of the tree
   property bool attachToWindow: true
+  property bool closing: false
+  
   function _host() {
     try { if (overlay.window && overlay.window.contentItem) return overlay.window.contentItem } catch (e) {}
     var t = overlay; while (t.parent) t = t.parent; return t
@@ -45,7 +44,6 @@ Item {
   }
   Component.onCompleted: _ensureOnHost()
   onVisibleChanged: if (visible) _ensureOnHost()
-  onZChanged: _ensureOnHost()
 
   // State
   property bool open: false
@@ -55,133 +53,202 @@ Item {
   property Component contentComponent: null
 
   // Placement
-  property int _x: 0
-  property int _y: 0
+  property real _targetX: 0
+  property real _targetY: 0
   property Item anchorItem: null
   property real anchorLocalX: 0
   property real anchorLocalY: 0
   readonly property bool anchored: anchorItem !== null
-  // follow anchor (e.g., on scroll)
-  property int _tick: 0
-  Timer { id: follow; interval: 16; repeat: true; running: overlay.open && overlay.anchored; onTriggered: overlay._tick++ }
-  // Snapshot of last pointer position (used if window cursor is unavailable)
-  property int _mouseX: 0
-  property int _mouseY: 0
+
+  // Follow anchor position updates
+  Timer {
+    id: followTimer
+    interval: 16
+    repeat: true
+    running: overlay.open && overlay.anchored
+    onTriggered: overlay._updateAnchoredPosition()
+  }
+
+  function _updateAnchoredPosition() {
+    if (!anchorItem) return
+    try {
+      var p = anchorItem.mapToItem(overlay, anchorLocalX, anchorLocalY)
+      var placed = _placeWithinViewport(p.x, p.y)
+      _targetX = placed.x
+      _targetY = placed.y
+    } catch (e) {}
+  }
 
   function _placeWithinViewport(px, py) {
-    // Try to avoid cursor by offsetting 14px right and 10px down, then clamp
-    var ox = Math.round(px + 14)
-    var oy = Math.round(py + 10)
+    var panelW = panel.width > 0 ? panel.width : 150
+    var panelH = panel.height > 0 ? panel.height : 40
+    
+    // Offset from cursor
+    var ox = Math.round(px + 12)
+    var oy = Math.round(py + 8)
+    
     // Prefer above if too close to bottom
-    if (oy + panel.implicitHeight > overlay.height) oy = Math.max(0, py - panel.implicitHeight - 12)
-    if (ox + panel.implicitWidth > overlay.width) ox = Math.max(0, overlay.width - panel.implicitWidth - 6)
+    if (oy + panelH > overlay.height - 8) {
+      oy = Math.max(8, py - panelH - 12)
+    }
+    // Clamp horizontally
+    if (ox + panelW > overlay.width - 8) {
+      ox = Math.max(8, overlay.width - panelW - 8)
+    }
+    if (ox < 8) ox = 8
+    if (oy < 8) oy = 8
+    
     return { x: ox, y: oy }
+  }
+
+  onOpenChanged: {
+    if (open) {
+      closing = false
+      panel.visible = true
+      panel.opacity = 1
+    } else {
+      closing = true
+      panel.opacity = 0
+    }
   }
 
   function openAt(x, y) {
     anchorItem = null
-    _x = x; _y = y
+    var p = _placeWithinViewport(x, y)
+    _targetX = p.x
+    _targetY = p.y
+    // Set position immediately before showing
+    panel.x = _targetX
+    panel.y = _targetY
     open = true
-    // Compute position immediately to avoid initial jump to (0,0)
-    var p = _placeWithinViewport(_x, _y); panel.x = p.x; panel.y = p.y
-    console.log("Tooltip.openAt:", x, y)
   }
-  function openNearPointer() {
-    anchorItem = null
-    var cx = _mouseX
-    var cy = _mouseY
-    try {
-      if (overlay.window && overlay.window.mapFromGlobal) {
-        // Prefer direct window mapping when available
-        var gp = overlay.window.mapFromGlobal(Qt.point(Qt.cursorPos.x, Qt.cursorPos.y))
-        cx = gp.x; cy = gp.y
-      } else if (overlay.window && overlay.window.contentItem && overlay.window.contentItem.mapFromGlobal) {
-        var mapped = overlay.window.contentItem.mapFromGlobal(Qt.cursorPos.x, Qt.cursorPos.y)
-        cx = mapped.x; cy = mapped.y
-      }
-    } catch (e) {}
-    var p = _placeWithinViewport(cx, cy)
-    _x = p.x; _y = p.y
-    open = true
-    console.log("Tooltip.openNearPointer at", _x, _y)
-  }
-  function openAtAnchor(item, lx, ly) {
-    try {
-      anchorItem = item; anchorLocalX = lx; anchorLocalY = ly; open = true; overlay._tick++
-      console.log("Tooltip.openAtAnchor for", item)
-    } catch (e) { console.log("Tooltip.openAtAnchor failed:", e); openAt(0,0) }
-  }
-  function openFromEvent(item, mouseX, mouseY) {
-    try {
-      anchorItem = item; anchorLocalX = mouseX; anchorLocalY = mouseY; open = true; overlay._tick++
-      console.log("Tooltip.openFromEvent for", item, mouseX, mouseY)
-    } catch (e) { console.log("Tooltip.openFromEvent failed:", e); openAt(0,0) }
-  }
-  function close() { open = false; anchorItem = null }
 
-  // Click-away
+  function openAtAnchor(item, lx, ly) {
+    if (!item) { openAt(0, 0); return }
+    anchorItem = item
+    anchorLocalX = lx
+    anchorLocalY = ly
+    // Calculate position first
+    try {
+      var p = item.mapToItem(overlay, lx, ly)
+      var placed = _placeWithinViewport(p.x, p.y)
+      _targetX = placed.x
+      _targetY = placed.y
+    } catch (e) {
+      _targetX = 0
+      _targetY = 0
+    }
+    // Set position immediately before showing
+    panel.x = _targetX
+    panel.y = _targetY
+    open = true
+  }
+
+  function openFromEvent(item, mouseX, mouseY) {
+    openAtAnchor(item, mouseX, mouseY)
+  }
+
+  function close() {
+    open = false
+    anchorItem = null
+  }
+
+  // Click-away background
   MouseArea {
     anchors.fill: parent
     visible: overlay.open
     enabled: visible
     acceptedButtons: Qt.AllButtons
-    propagateComposedEvents: true
     onClicked: overlay.close()
   }
 
   // Panel
   Rectangle {
     id: panel
-    // anchored mapping
-    x: overlay.anchored ? (function(){ overlay._tick; var p = overlay.anchorItem ? overlay.anchorItem.mapToItem(overlay, overlay.anchorLocalX, overlay.anchorLocalY) : { x: overlay._x }; var q = overlay._placeWithinViewport(p.x, p.y); return q.x })() : _x
-    y: overlay.anchored ? (function(){ overlay._tick; var p = overlay.anchorItem ? overlay.anchorItem.mapToItem(overlay, overlay.anchorLocalX, overlay.anchorLocalY) : { y: overlay._y }; var q = overlay._placeWithinViewport(p.x || 0, p.y || 0); return q.y })() : _y
-    visible: overlay.open || opacity > 0.01
-    opacity: overlay.open ? 1.0 : 0.0
-    radius: 10
-    // Slightly stronger background for readability
-    color: Palette.isDarkMode() ? Qt.lighter(Palette.palette().surface, 1.04)
-                                 : Qt.darker(Palette.palette().surface, 1.06)
+    x: overlay._targetX
+    y: overlay._targetY
+    visible: false
+    opacity: 0
+    
+    radius: 8
+    color: Components.ColorPalette.isDarkMode 
+           ? Qt.lighter(Components.ColorPalette.surface, 1.12)
+           : Qt.darker(Components.ColorPalette.surface, 1.06)
     border.width: 0
     antialiasing: true
-    width: contentCol.implicitWidth + 18
-    height: contentCol.implicitHeight + 14
-    Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-    Behavior on x { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-    Behavior on y { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+    
+    width: contentCol.width + 20
+    height: contentCol.height + 14
+    
+    Behavior on x { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+    Behavior on y { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+    
+    Behavior on opacity { 
+      NumberAnimation { 
+        duration: 160
+        easing.type: Easing.OutCubic
+        onRunningChanged: {
+          if (!running && panel.opacity === 0 && overlay.closing) {
+            panel.visible = false
+            overlay.closing = false
+          }
+        }
+      }
+    }
 
     Column {
       id: contentCol
-      anchors.margins: 10
-      anchors.fill: parent
-      spacing: 8
+      anchors.centerIn: parent
+      spacing: 4
 
-      // Default content if no custom content provided
+      // Custom content loader
       Loader {
-        id: custom
-        visible: item !== null
+        id: customLoader
+        active: overlay.contentComponent !== null
         sourceComponent: overlay.contentComponent
-        anchors.left: parent.left
-        anchors.right: parent.right
       }
 
-      Item {
-        id: defaultBlock
-        visible: custom.item === null
-        implicitWidth: col.implicitWidth
-        implicitHeight: col.implicitHeight
-        Column { id: col; spacing: 6
-          Text { text: overlay.title; visible: text && text.length > 0; color: Palette.palette().onSurface; font.pixelSize: 14; font.bold: true; wrapMode: Text.Wrap }
-          Text { text: overlay.text;  visible: text && text.length > 0; color: Palette.palette().onSurfaceVariant; font.pixelSize: 13; wrapMode: Text.Wrap }
-          // Actions row
-          Row { spacing: 8; visible: Array.isArray(overlay.actions) && overlay.actions.length > 0
-            Repeater { model: Array.isArray(overlay.actions) ? overlay.actions : []
-              delegate: Item {
-                property int minHeight: 24
-                height: Math.max(minHeight, lbl.implicitHeight)
-                width: lbl.implicitWidth
-                // No background; text only, left aligned with body text
-                Text { id: lbl; anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; text: (modelData && modelData.label) ? modelData.label : ""; color: Palette.palette().primary; font.pixelSize: 12 }
-                MouseArea { anchors.fill: parent; onClicked: { try { if (modelData && modelData.onTriggered) modelData.onTriggered() } catch(e){} overlay.close() } }
+      // Default content (title)
+      Text {
+        id: titleText
+        text: overlay.title
+        visible: overlay.title.length > 0 && customLoader.item === null
+        color: Components.ColorPalette.onSurface
+        font.pixelSize: 13
+        font.weight: Font.Medium
+        wrapMode: Text.NoWrap
+      }
+      
+      // Default content (text/description)
+      Text {
+        id: descText
+        text: overlay.text
+        visible: overlay.text.length > 0 && customLoader.item === null
+        color: Components.ColorPalette.onSurfaceVariant
+        font.pixelSize: 12
+        wrapMode: Text.NoWrap
+      }
+      
+      // Actions row
+      Row {
+        spacing: 12
+        visible: Array.isArray(overlay.actions) && overlay.actions.length > 0 && customLoader.item === null
+        topPadding: 4
+        
+        Repeater {
+          model: Array.isArray(overlay.actions) ? overlay.actions : []
+          delegate: Text {
+            text: (modelData && modelData.label) ? modelData.label : ""
+            color: Components.ColorPalette.primary
+            font.pixelSize: 12
+            font.weight: Font.Medium
+            
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                try { if (modelData && modelData.onTriggered) modelData.onTriggered() } catch(e) {}
+                overlay.close()
               }
             }
           }
@@ -190,5 +257,3 @@ Item {
     }
   }
 }
-
-

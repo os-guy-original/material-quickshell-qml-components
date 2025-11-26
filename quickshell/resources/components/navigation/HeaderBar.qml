@@ -1,5 +1,5 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 // Minimal transparent header with a title and an optional close button
 Item {
@@ -19,7 +19,7 @@ Item {
     Text {
         id: titleText
         text: root.title
-        color: Palette.palette().onSurface
+        color: Components.ColorPalette.onSurface
         font.pixelSize: 16
         elide: Text.ElideRight
         anchors.verticalCenter: parent.verticalCenter
@@ -43,7 +43,7 @@ Item {
             id: hoverBg
             anchors.fill: parent
             radius: height / 2
-            color: Palette.palette().onSurface
+            color: Components.ColorPalette.onSurface
             opacity: mouse.containsMouse ? 0.08 : 0.0
             Behavior on opacity { NumberAnimation { duration: 100; easing.type: Easing.InOutQuad } }
         }
@@ -52,7 +52,7 @@ Item {
             width: 14; height: 14
             onPaint: {
                 var ctx = getContext('2d'); ctx.reset();
-                ctx.strokeStyle = Palette.palette().onSurface; ctx.lineWidth = 2;
+                ctx.strokeStyle = Components.ColorPalette.onSurface; ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(2,2); ctx.lineTo(12,12); ctx.moveTo(12,2); ctx.lineTo(2,12); ctx.stroke();
             }
         }

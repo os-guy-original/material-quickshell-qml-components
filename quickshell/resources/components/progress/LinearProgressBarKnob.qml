@@ -1,11 +1,11 @@
 import QtQuick 2.15
-import "../../colors.js" as Palette
+import ".." as Components
 
 Item {
     id: root
     property real progress: 0.0
-    property color trackColor: Palette.palette().surfaceVariant
-    property color progressColor: Palette.palette().primary
+    property color trackColor: Components.ColorPalette.isDarkMode ? Components.ColorPalette.surfaceVariant : Qt.darker(Components.ColorPalette.surfaceVariant, 1.15)
+    property color progressColor: Components.ColorPalette.primary
     property real heightPixels: 14
     property string knobShape: "circle" // "circle" | "diamond" | "none"
     property real knobSize: 10
